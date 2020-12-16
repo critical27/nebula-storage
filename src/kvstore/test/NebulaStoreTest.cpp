@@ -11,6 +11,7 @@
 #include "common/meta/Common.h"
 #include <gtest/gtest.h>
 #include <rocksdb/db.h>
+#include <folly/synchronization/ParkingLot.h>
 #include <iostream>
 #include <thrift/lib/cpp/concurrency/ThreadManager.h>
 #include "kvstore/NebulaStore.h"
@@ -891,6 +892,232 @@ TEST(NebulaStoreTest, AtomicOpBatchTest) {
         EXPECT_EQ(expected, result);
     }
 }
+
+TEST(NebulaStoreTest, FollowerReadTest) {
+    FLAGS_raft_heartbeat_interval_secs = 1;
+    fs::TempDir rootPath("/tmp/nebula_store_test.XXXXXX");
+    int32_t partCount = 3;
+    int32_t replicas = 3;
+    auto initNebulaStore = [partCount] (const std::vector<HostAddr>& peers,
+                                        int32_t index,
+                                        const std::string& path) -> std::unique_ptr<NebulaStore> {
+        LOG(INFO) << "Start nebula store on " << peers[index];
+        auto sIoThreadPool = std::make_shared<folly::IOThreadPoolExecutor>(4);
+        auto partMan = std::make_unique<MemPartManager>();
+        for (auto partId = 0; partId < partCount; partId++) {
+            PartHosts pm;
+            pm.spaceId_ = 0;
+            pm.partId_ = partId;
+            pm.hosts_ = peers;
+            partMan->partsMap_[0][partId] = std::move(pm);
+        }
+        std::vector<std::string> paths;
+        paths.emplace_back(folly::stringPrintf("%s/disk%d", path.c_str(), index));
+        KVOptions options;
+        options.dataPaths_ = std::move(paths);
+        options.partMan_ = std::move(partMan);
+        HostAddr local = peers[index];
+        return std::make_unique<NebulaStore>(std::move(options),
+                                             sIoThreadPool,
+                                             local,
+                                             getHandlers());
+    };
+
+    std::string ip("127.0.0.1");
+    std::vector<HostAddr> peers;
+    for (int32_t i = 0; i < replicas; i++) {
+        peers.emplace_back(ip, network::NetworkUtils::getAvailablePort());
+    }
+
+    std::vector<std::unique_ptr<NebulaStore>> stores;
+    for (int i = 0; i < replicas; i++) {
+        stores.emplace_back(initNebulaStore(peers, i, rootPath.path()));
+        stores.back()->init();
+    }
+
+    auto waitLeader = [&stores, replicas, partCount] () {
+        while (true) {
+            int32_t leaderCount = 0;
+            for (int i = 0; i < replicas; i++) {
+                std::unordered_map<GraphSpaceID, std::vector<PartitionID>> leaderIds;
+                leaderCount += stores[i]->allLeader(leaderIds);
+            }
+            if (leaderCount == partCount) {
+                break;
+            }
+            usleep(100000);
+        }
+    };
+
+    LOG(INFO) << "Waiting for all leaders elected!";
+    waitLeader();
+    sleep(1);
+
+    LOG(INFO) << "Let's write some logs...";
+
+    auto findStoreIndex = [&] (const HostAddr& addr) {
+        for (size_t i = 0; i < peers.size(); i++) {
+            if (peers[i] == addr) {
+                return i;
+            }
+        }
+        LOG(FATAL) << "Should not reach here!";
+        return 0UL;
+    };
+
+    LOG(INFO) << "Put some data then read them with get";
+    for (int part = 0; part < partCount; part++) {
+        auto res = stores[0]->partLeader(0, part);
+        CHECK(ok(res));
+        auto leader = value(std::move(res));
+        auto leaderIndex = findStoreIndex(leader);
+
+        std::thread write([&stores, part, leaderIndex] {
+            int32_t count = 10;
+            for (auto i = 0; i < count; i++) {
+                std::vector<KV> data;
+                data.emplace_back(folly::stringPrintf("key_%d", part),
+                                  folly::stringPrintf("%d", i));
+                folly::Baton<true, std::atomic> baton;
+                stores[leaderIndex]->asyncMultiPut(0, part, std::move(data),
+                                                   [&baton] (ResultCode code) {
+                    EXPECT_EQ(ResultCode::SUCCEEDED, code);
+                    baton.post();
+                });
+                baton.wait();
+            }
+            LOG(INFO) << "Write finish";
+        });
+
+        std::thread asyncReadOneByOne([&stores, part, leaderIndex, replicas] {
+            int32_t count = 10;
+            std::string key = folly::stringPrintf("key_%d", part);
+            std::vector<std::string> values(count, "");
+            for (auto i = 0; i < count; i++) {
+                auto followerIndex = (leaderIndex + 1) % replicas;
+                auto code = stores[followerIndex]->asyncGet(0, part, key, &values[i]).get();
+                EXPECT_EQ(ResultCode::SUCCEEDED, code);
+            }
+
+            int32_t prev = 0;
+            for (const auto& value : values) {
+                if (!value.empty()) {
+                    auto cur = std::stoi(value);
+                    EXPECT_LE(prev, cur);
+                    prev = cur;
+                }
+            }
+            LOG(INFO) << "AsyncReadOneByOne finish";
+        });
+
+        std::thread asyncRead([&stores, part, leaderIndex, replicas] {
+            int32_t count = 10;
+            std::string key = folly::stringPrintf("key_%d", part);
+            std::vector<std::string> values(count, "");
+            std::vector<ResultCode> codes(count, ResultCode::SUCCEEDED);
+            for (auto i = 0; i < count; i++) {
+                auto followerIndex = (leaderIndex + 1) % replicas;
+                stores[followerIndex]->asyncGet(0, part, key, &values[i])
+                    .thenValue([&codes, i] (auto&& code) {
+                        codes[i] = code;
+                    });
+                usleep(1000);
+            }
+
+            sleep(1);
+            for (const auto& code : codes) {
+                EXPECT_EQ(ResultCode::SUCCEEDED, code);
+            }
+            LOG(INFO) << "AsyncRead finish";
+        });
+
+        write.join();
+        asyncReadOneByOne.join();
+        asyncRead.join();
+    }
+
+    LOG(INFO) << "Put some data then read them with prefix";
+    for (int part = 0; part < partCount; part++) {
+        auto res = stores[0]->partLeader(0, part);
+        CHECK(ok(res));
+        auto leader = value(std::move(res));
+        auto leaderIndex = findStoreIndex(leader);
+
+        std::thread write([&stores, part, leaderIndex] {
+            int32_t count = 10;
+            for (auto i = 0; i <= count; i++) {
+                std::vector<KV> data;
+                data.emplace_back(folly::stringPrintf("prefix_%d_%d", part, i),
+                                  folly::stringPrintf("val_%d", i));
+                folly::Baton<true, std::atomic> baton;
+                stores[leaderIndex]->asyncMultiPut(0, part, std::move(data),
+                                                   [&baton] (ResultCode code) {
+                    EXPECT_EQ(ResultCode::SUCCEEDED, code);
+                    baton.post();
+                });
+                baton.wait();
+            }
+            LOG(INFO) << "Write finish";
+        });
+
+        std::thread asyncReadOneByOne([&stores, part, leaderIndex, replicas] {
+            int32_t count = 10;
+            std::string prefix = folly::stringPrintf("prefix_%d", part);
+            std::vector<std::unique_ptr<KVIterator>> iters;
+            for (auto i = 0; i < count; i++) {
+                std::unique_ptr<KVIterator> iter;
+                iters.emplace_back(std::move(iter));
+            }
+            for (auto i = 0; i < count; i++) {
+                auto followerIndex = (leaderIndex + 1) % replicas;
+                auto code = stores[followerIndex]->asyncPrefix(0, part, prefix, &iters[i]).get();
+                EXPECT_EQ(ResultCode::SUCCEEDED, code);
+            }
+
+            int32_t prev = 0;
+            for (const auto& iter : iters) {
+                int32_t cur = 0;
+                while (iter->valid()) {
+                    cur++;
+                    iter->next();
+                }
+                EXPECT_LE(prev, cur);
+                prev = cur;
+            }
+            LOG(INFO) << "AsyncReadOneByOne finish";
+        });
+
+        std::thread asyncRead([&stores, part, leaderIndex, replicas] {
+            int32_t count = 10;
+            std::string prefix = folly::stringPrintf("prefix_%d", part);
+            std::vector<ResultCode> codes(count, ResultCode::SUCCEEDED);
+            std::vector<std::unique_ptr<KVIterator>> iters;
+            for (auto i = 0; i < count; i++) {
+                std::unique_ptr<KVIterator> iter;
+                iters.emplace_back(std::move(iter));
+            }
+            for (auto i = 0; i < count; i++) {
+                auto followerIndex = (leaderIndex + 1) % replicas;
+                stores[followerIndex]->asyncPrefix(0, part, prefix, &iters[i])
+                    .thenValue([&codes, i] (auto&& code) {
+                        codes[i] = code;
+                    });
+                usleep(1000);
+            }
+
+            sleep(1);
+            for (const auto& code : codes) {
+                EXPECT_EQ(ResultCode::SUCCEEDED, code);
+            }
+            LOG(INFO) << "AsyncRead finish";
+        });
+
+        write.join();
+        asyncReadOneByOne.join();
+        asyncRead.join();
+    }
+}
+
 }  // namespace kvstore
 }  // namespace nebula
 

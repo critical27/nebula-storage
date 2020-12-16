@@ -158,3 +158,18 @@ nebula_add_executable(
         gtest
         boost_regex
 )
+
+nebula_add_executable(
+    NAME
+        follower_read_bm
+    SOURCES
+        FollowerReadBenchmark.cpp
+    OBJECTS
+        ${KVSTORE_TEST_LIBS}
+    LIBRARIES
+        ${THRIFT_LIBRARIES}
+        ${ROCKSDB_LIBRARIES}
+        proxygenlib
+        follybenchmark
+        boost_regex
+)

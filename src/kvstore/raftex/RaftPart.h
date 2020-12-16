@@ -219,6 +219,11 @@ public:
         const cpp2::SendSnapshotRequest& req,
         cpp2::SendSnapshotResponse& resp);
 
+    // Process getCommitLogId request
+    void processGetCommitLogIdRequest(
+        const cpp2::GetCommitLogIdRequest& req,
+        cpp2::GetCommitLogIdResponse& resp);
+
     bool leaseValid();
 
     bool needToCleanWal();

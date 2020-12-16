@@ -5,16 +5,19 @@
  */
 
 #include "kvstore/Part.h"
+#include "common/base/ErrorOr.h"
 #include "kvstore/LogEncoder.h"
 #include "kvstore/RocksEngineConfig.h"
 #include "utils/NebulaKeyUtils.h"
 
 DEFINE_int32(cluster_id, 0, "A unique id for each cluster");
+DECLARE_int32(raft_rpc_timeout_ms);
 
 namespace nebula {
 namespace kvstore {
 
 using nebula::raftex::AppendLogResult;
+using ErrOrCommitId = ErrorOr<raftex::cpp2::ErrorCode, LogID>;
 
 Part::Part(GraphSpaceID spaceId,
            PartitionID partId,
@@ -173,6 +176,40 @@ void Part::asyncRemovePeer(const HostAddr& peer, KVCallback cb) {
     });
 }
 
+folly::Future<ResultCode> Part::asyncWaitUntil() {
+    auto eb = ioThreadPool_->getEventBase();
+    return folly::via(eb, [this, eb] () -> folly::Future<ResultCode> {
+        auto addr = leader();
+        auto client = clientMan_->client(addr, eb, false, FLAGS_raft_rpc_timeout_ms);
+        raftex::cpp2::GetCommitLogIdRequest req;
+        req.space = spaceId_;
+        req.part = partId_;
+        return client->future_getCommitLogId(req)
+            .via(eb)
+            .thenTry([] (auto&& t) -> folly::Future<ErrOrCommitId> {
+                if (t.hasException()) {
+                    LOG(ERROR) << "Get leader commit Id failed: " << t.exception();
+                    return raftex::cpp2::ErrorCode::E_EXCEPTION;
+                }
+                auto resp = std::move(t.value());
+                if (resp.error_code == raftex::cpp2::ErrorCode::SUCCEEDED) {
+                    return resp.committed_log_id;
+                } else {
+                    return resp.error_code;
+                }
+            })
+            .via(folly::getIOExecutor().get())
+            .thenValue([this] (auto&& errorOrId) {
+                if (!nebula::ok(errorOrId)) {
+                    return ResultCode::ERR_LEADER_CHANGED;
+                }
+                auto expect = nebula::value(errorOrId);
+                VLOG(3) << idStr_ << "Wait until state machine apply to " << expect;
+                waitApplyLot_.park(&lastApplyLogId_, expect, [] { return true; }, [] {});
+                return ResultCode::SUCCEEDED;
+            });
+    });
+}
 
 void Part::setBlocking(bool sign) {
     blocking_ = sign;
@@ -318,9 +355,18 @@ bool Part::commitLogs(std::unique_ptr<LogIterator> iter) {
             return false;
         }
     }
-    return engine_->commitBatchWrite(std::move(batch),
-                                     FLAGS_rocksdb_disable_wal,
-                                     FLAGS_rocksdb_wal_sync) == ResultCode::SUCCEEDED;
+    auto code = engine_->commitBatchWrite(std::move(batch),
+                                          FLAGS_rocksdb_disable_wal,
+                                          FLAGS_rocksdb_wal_sync);
+    lastApplyLogId_.store(lastId, std::memory_order_release);
+    waitApplyLot_.unpark(&lastApplyLogId_, [lastId] (const auto& waitUntilId) {
+        if (waitUntilId <= lastId) {
+            return folly::UnparkControl::RemoveContinue;
+        } else {
+            return folly::UnparkControl::RetainContinue;
+        }
+    });
+    return code == ResultCode::SUCCEEDED;
 }
 
 std::pair<int64_t, int64_t> Part::commitSnapshot(const std::vector<std::string>& rows,

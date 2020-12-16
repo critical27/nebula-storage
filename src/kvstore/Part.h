@@ -8,6 +8,7 @@
 #define KVSTORE_PART_H_
 
 #include "common/base/Base.h"
+#include <folly/synchronization/ParkingLot.h>
 #include "utils/NebulaKeyUtils.h"
 #include "raftex/RaftPart.h"
 #include "kvstore/Common.h"
@@ -62,6 +63,8 @@ public:
     void asyncAddPeer(const HostAddr& peer, KVCallback cb);
 
     void asyncRemovePeer(const HostAddr& peer, KVCallback cb);
+
+    folly::Future<ResultCode> asyncWaitUntil();
 
     void setBlocking(bool sign);
 
@@ -138,6 +141,8 @@ protected:
 
 private:
     KVEngine* engine_ = nullptr;
+    folly::ParkingLot<LogID> waitApplyLot_;
+    std::atomic<LogID> lastApplyLogId_;
 };
 
 }  // namespace kvstore

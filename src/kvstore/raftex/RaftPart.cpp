@@ -1984,6 +1984,18 @@ bool RaftPart::leaseValid() {
         < FLAGS_raft_heartbeat_interval_secs * 1000 - lastMsgAcceptedCostMs_;
 }
 
+void RaftPart::processGetCommitLogIdRequest(const cpp2::GetCommitLogIdRequest&,
+                                            cpp2::GetCommitLogIdResponse& resp) {
+    std::lock_guard<std::mutex> g(raftLock_);
+    if (role_ != Role::LEADER) {
+        VLOG(2) << idStr_ << "Bad role " << roleStr(role_);
+        resp.set_error_code(cpp2::ErrorCode::E_NOT_A_LEADER);
+        return;
+    }
+    resp.set_committed_log_id(committedLogId_);
+    resp.set_error_code(cpp2::ErrorCode::SUCCEEDED);
+}
+
 }  // namespace raftex
 }  // namespace nebula
 

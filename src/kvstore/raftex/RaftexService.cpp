@@ -228,6 +228,19 @@ void RaftexService::sendSnapshot(
 
     part->processSendSnapshotRequest(req, resp);
 }
+
+void RaftexService::getCommitLogId(cpp2::GetCommitLogIdResponse& resp,
+                                   const cpp2::GetCommitLogIdRequest& req) {
+    auto part = findPart(req.get_space(), req.get_part());
+    if (!part) {
+        // Not found
+        resp.set_error_code(cpp2::ErrorCode::E_UNKNOWN_PART);
+        return;
+    }
+
+    part->processGetCommitLogIdRequest(req, resp);
+}
+
 }  // namespace raftex
 }  // namespace nebula
 

@@ -45,9 +45,11 @@ public:
     void appendLog(cpp2::AppendLogResponse& resp,
                    const cpp2::AppendLogRequest& req) override;
 
-    void sendSnapshot(
-        cpp2::SendSnapshotResponse& resp,
-        const cpp2::SendSnapshotRequest& req) override;
+    void sendSnapshot(cpp2::SendSnapshotResponse& resp,
+                      const cpp2::SendSnapshotRequest& req) override;
+
+    void getCommitLogId(cpp2::GetCommitLogIdResponse& resp,
+                        const cpp2::GetCommitLogIdRequest& req) override;
 
     void addPartition(std::shared_ptr<RaftPart> part);
     void removePartition(std::shared_ptr<RaftPart> part);

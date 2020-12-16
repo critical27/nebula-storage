@@ -207,6 +207,34 @@ public:
                        raftex::AtomicOp op,
                        KVCallback cb) override;
 
+    folly::Future<ResultCode> asyncGet(GraphSpaceID spaceId,
+                                       PartitionID partId,
+                                       const std::string& key,
+                                       std::string* value);
+
+    folly::Future<std::pair<ResultCode, std::vector<Status>>>
+    asyncMultiGet(GraphSpaceID spaceId,
+                  PartitionID partId,
+                  const std::vector<std::string>& keys,
+                  std::vector<std::string>* values);
+
+    folly::Future<ResultCode> asyncPrefix(GraphSpaceID spaceId,
+                                          PartitionID partId,
+                                          const std::string& prefix,
+                                          std::unique_ptr<KVIterator>* iter);
+
+    folly::Future<ResultCode> asyncRange(GraphSpaceID spaceId,
+                                         PartitionID partId,
+                                         const std::string& start,
+                                         const std::string& end,
+                                         std::unique_ptr<KVIterator>* iter);
+
+    folly::Future<ResultCode> asyncRangeWithPrefix(GraphSpaceID spaceId,
+                                                   PartitionID partId,
+                                                   const std::string& start,
+                                                   const std::string& prefix,
+                                                   std::unique_ptr<KVIterator>* iter);
+
     ErrorOr<ResultCode, std::shared_ptr<Part>> part(GraphSpaceID spaceId,
                                                     PartitionID partId) override;
 

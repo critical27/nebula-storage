@@ -754,6 +754,158 @@ void NebulaStore::asyncAtomicOp(GraphSpaceID spaceId,
     part->asyncAtomicOp(std::move(op), std::move(cb));
 }
 
+folly::Future<ResultCode> NebulaStore::asyncGet(GraphSpaceID spaceId,
+                                                PartitionID  partId,
+                                                const std::string& key,
+                                                std::string* value) {
+    auto ret = part(spaceId, partId);
+    if (!ok(ret)) {
+        return error(ret);
+    }
+    auto part = nebula::value(ret);
+    if (!part->isLeader() || !part->leaseValid()) {
+        folly::Promise<ResultCode> promise;
+        auto future = promise.getFuture();
+        part->asyncWaitUntil()
+            .thenValue([promise = std::move(promise), part, &key, value] (auto&& code) mutable {
+                if (code != ResultCode::SUCCEEDED) {
+                    promise.setValue(code);
+                    return;
+                }
+                promise.setValue(part->engine()->get(key, value));
+            });
+        return future;
+    } else {
+        return part->engine()->get(key, value);
+    }
+}
+
+folly::Future<std::pair<ResultCode, std::vector<Status>>>
+NebulaStore::asyncMultiGet(GraphSpaceID spaceId,
+                           PartitionID partId,
+                           const std::vector<std::string>& keys,
+                           std::vector<std::string>* values) {
+    std::vector<Status> status;
+    auto ret = part(spaceId, partId);
+    if (!ok(ret)) {
+        return std::make_pair(error(ret), status);
+    }
+    auto part = nebula::value(ret);
+    if (!part->isLeader() || !part->leaseValid()) {
+        folly::Promise<std::pair<ResultCode, std::vector<Status>>> promise;
+        auto future = promise.getFuture();
+        part->asyncWaitUntil().thenValue([promise = std::move(promise), status = std::move(status),
+                                          part, &keys, values] (auto&& code) mutable {
+                if (code != ResultCode::SUCCEEDED) {
+                    promise.setValue(std::make_pair(code, status));
+                    return;
+                }
+                status = part->engine()->multiGet(keys, values);
+                auto allExist = std::all_of(status.begin(), status.end(),
+                                            [] (const auto& s) {
+                                                return s.ok();
+                                            });
+                if (allExist) {
+                    return promise.setValue(std::make_pair(ResultCode::SUCCEEDED, status));
+                } else {
+                    return promise.setValue(std::make_pair(ResultCode::ERR_PARTIAL_RESULT, status));
+                }
+            });
+        return future;
+    } else {
+        status = part->engine()->multiGet(keys, values);
+        auto allExist = std::all_of(status.begin(), status.end(),
+                                    [] (const auto& s) {
+                                        return s.ok();
+                                    });
+        if (allExist) {
+            return std::make_pair(ResultCode::SUCCEEDED, status);
+        } else {
+            return std::make_pair(ResultCode::ERR_PARTIAL_RESULT, status);
+        }
+    }
+}
+
+folly::Future<ResultCode> NebulaStore::asyncPrefix(GraphSpaceID spaceId,
+                                                   PartitionID partId,
+                                                   const std::string& prefix,
+                                                   std::unique_ptr<KVIterator>* iter) {
+    auto ret = part(spaceId, partId);
+    if (!ok(ret)) {
+        return error(ret);
+    }
+    auto part = nebula::value(ret);
+    if (!part->isLeader() || !part->leaseValid()) {
+        folly::Promise<ResultCode> promise;
+        auto future = promise.getFuture();
+        part->asyncWaitUntil()
+            .thenValue([promise = std::move(promise), part, &prefix, iter] (auto&& code) mutable {
+                if (code != ResultCode::SUCCEEDED) {
+                    promise.setValue(code);
+                    return;
+                }
+                promise.setValue(part->engine()->prefix(prefix, iter));
+            });
+        return future;
+    } else {
+        return part->engine()->prefix(prefix, iter);
+    }
+}
+
+folly::Future<ResultCode> NebulaStore::asyncRange(GraphSpaceID spaceId,
+                                                  PartitionID  partId,
+                                                  const std::string& start,
+                                                  const std::string& end,
+                                                  std::unique_ptr<KVIterator>* iter) {
+    auto ret = part(spaceId, partId);
+    if (!ok(ret)) {
+        return error(ret);
+    }
+    auto part = nebula::value(ret);
+    if (!part->isLeader() || !part->leaseValid()) {
+        folly::Promise<ResultCode> promise;
+        auto future = promise.getFuture();
+        part->asyncWaitUntil().thenValue(
+            [promise = std::move(promise), part, &start, &end, iter] (auto&& code) mutable {
+                if (code != ResultCode::SUCCEEDED) {
+                    promise.setValue(code);
+                    return;
+                }
+                promise.setValue(part->engine()->range(start, end, iter));
+            });
+        return future;
+    } else {
+        return part->engine()->range(start, end, iter);
+    }
+}
+
+folly::Future<ResultCode> NebulaStore::asyncRangeWithPrefix(GraphSpaceID spaceId,
+                                                            PartitionID  partId,
+                                                            const std::string& start,
+                                                            const std::string& prefix,
+                                                            std::unique_ptr<KVIterator>* iter) {
+    auto ret = part(spaceId, partId);
+    if (!ok(ret)) {
+        return error(ret);
+    }
+    auto part = nebula::value(ret);
+    if (!part->isLeader() || !part->leaseValid()) {
+        folly::Promise<ResultCode> promise;
+        auto future = promise.getFuture();
+        part->asyncWaitUntil().thenValue(
+            [promise = std::move(promise), part, &start, &prefix, iter] (auto&& code) mutable {
+                if (code != ResultCode::SUCCEEDED) {
+                    promise.setValue(code);
+                    return;
+                }
+                promise.setValue(part->engine()->rangeWithPrefix(start, prefix, iter));
+            });
+        return future;
+    } else {
+        return part->engine()->rangeWithPrefix(start, prefix, iter);
+    }
+}
+
 ErrorOr<ResultCode, std::shared_ptr<Part>> NebulaStore::part(GraphSpaceID spaceId,
                                                              PartitionID partId) {
     folly::RWSpinLock::ReadHolder rh(&lock_);
