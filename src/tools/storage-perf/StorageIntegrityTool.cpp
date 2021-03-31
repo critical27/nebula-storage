@@ -172,7 +172,7 @@ private:
         std::unordered_map<TagID, std::vector<std::string>> propNames;
         propNames[tagId_].emplace_back(propName_);
         auto future =
-            client_->addVertices(spaceId_, genVertices(prev, cur, startId), propNames, true);
+            client_->addVertices(spaceId_, genVertices(prev, cur, startId), propNames, true, false);
         auto resp = std::move(future).get();
         if (!resp.succeeded()) {
             for (auto& err : resp.failedParts()) {

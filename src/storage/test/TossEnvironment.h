@@ -231,7 +231,7 @@ struct TossEnvironment {
     folly::SemiFuture<StorageRpcResponse<cpp2::ExecResponse>>
     addEdgesAsync(const std::vector<cpp2::NewEdge>& edges, bool useToss = true) {
         auto propNames = makeColNames(edges.back().get_props().size());
-        return sClient_->addEdges(spaceId_, edges, propNames, true, nullptr, useToss);
+        return sClient_->addEdges(spaceId_, edges, propNames, true, false, nullptr, useToss);
     }
 
     static std::vector<std::string> makeColNames(size_t n) {
