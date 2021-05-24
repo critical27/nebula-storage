@@ -289,6 +289,143 @@ TEST(RocksEngineTest, BackupRestoreTable) {
     EXPECT_EQ(num, 5);
 }
 
+TEST(RocksEngineTest, TailingTest) {
+    fs::TempDir rootPath("/tmp/rocksdb_engine_TailingTest.XXXXXX");
+    auto engine = std::make_unique<RocksEngine>(0, kDefaultVIdLen, rootPath.path());
+    for (int i = 0; i < 10; i++) {
+        auto key = folly::stringPrintf("key-1-%d", i);
+        auto val = folly::stringPrintf("old-val%d", i);
+        engine->put(key, val);
+    }
+
+    std::thread write([db = engine.get()] {
+        // sleep a while to wait db iterator initialized
+        sleep(1);
+        for (int i = 0; i < 10; i++) {
+            auto key = folly::stringPrintf("key-2-%d", i);
+            auto val = folly::stringPrintf("new-val%d", i);
+            db->put(key, val);
+        }
+    });
+
+    {
+        std::string prefix = "key";
+        rocksdb::ReadOptions options;
+        options.prefix_same_as_start = true;
+        options.tailing = true;
+        rocksdb::Iterator* iter = engine->db_->NewIterator(options);
+        if (iter) {
+            iter->Seek(rocksdb::Slice(prefix));
+        }
+
+        // wait write thread has finished
+        sleep(3);
+
+        std::unique_ptr<KVIterator> storageIter;
+        storageIter.reset(new RocksPrefixIter(iter, prefix));
+
+        int32_t count = 0;
+        while (storageIter->valid()) {
+            VLOG(1) << storageIter->key() << " " << storageIter->val();
+            storageIter->next();
+            count++;
+        }
+        EXPECT_EQ(count, 20);
+    }
+    write.join();
+}
+
+TEST(RocksEngineTest, SnapshotTest) {
+    fs::TempDir rootPath("/tmp/rocksdb_engine_SnapshotTest.XXXXXX");
+    auto engine = std::make_unique<RocksEngine>(0, kDefaultVIdLen, rootPath.path());
+    for (int i = 0; i < 10; i++) {
+        auto key = folly::stringPrintf("key-%d", i);
+        auto val = folly::stringPrintf("old-%d", i);
+        engine->put(key, val);
+    }
+
+    const auto* snapshot = engine->db_->GetSnapshot();
+    std::string prefix = "key";
+
+    for (int i = 0; i < 5; i++) {
+        auto key = folly::stringPrintf("key-%d", i);
+        auto val = folly::stringPrintf("new-%d", i);
+        engine->put(key, val);
+    }
+    {
+        // read from snapshot
+        rocksdb::ReadOptions options;
+        options.snapshot = snapshot;
+        auto* iter = engine->db_->NewIterator(options);
+        if (iter) {
+            iter->Seek(rocksdb::Slice(prefix));
+        }
+        std::unique_ptr<KVIterator> storageIter;
+        storageIter.reset(new RocksPrefixIter(iter, prefix));
+
+        int32_t count = 0;
+        while (storageIter->valid()) {
+            auto key = storageIter->key();
+            auto val = storageIter->val();
+            EXPECT_EQ(folly::stringPrintf("key-%d", count), key);
+            EXPECT_EQ(folly::stringPrintf("old-%d", count), val);
+            storageIter->next();
+            count++;
+        }
+        EXPECT_EQ(count, 10);
+    }
+    {
+        // read from latest
+        rocksdb::ReadOptions options;
+        auto* iter = engine->db_->NewIterator(options);
+        if (iter) {
+            iter->Seek(rocksdb::Slice(prefix));
+        }
+        std::unique_ptr<KVIterator> storageIter;
+        storageIter.reset(new RocksPrefixIter(iter, prefix));
+
+        int32_t count = 0;
+        while (storageIter->valid()) {
+            auto key = storageIter->key();
+            auto val = storageIter->val();
+            EXPECT_EQ(folly::stringPrintf("key-%d", count), key);
+            if (count < 5) {
+                EXPECT_EQ(folly::stringPrintf("new-%d", count), val);
+            } else {
+                EXPECT_EQ(folly::stringPrintf("old-%d", count), val);
+            }
+            storageIter->next();
+            count++;
+        }
+        EXPECT_EQ(count, 10);
+    }
+    {
+        // read new data after snapshot
+        rocksdb::ReadOptions options;
+        options.prefix_same_as_start = true;
+        // do not include the seq num of snapshot
+        options.iter_start_seqnum = snapshot->GetSequenceNumber() + 1;
+        auto* iter = engine->db_->NewIterator(options);
+        if (iter) {
+            iter->Seek(rocksdb::Slice(prefix));
+        }
+
+        int32_t count = 0;
+        while (iter->Valid()) {
+            // when iter_start_seqnum is specified, internal key is returned
+            rocksdb::FullKey fKey;
+            rocksdb::ParseFullKey(iter->key(), &fKey);
+            EXPECT_EQ(folly::stringPrintf("key-%d", count), fKey.user_key.ToString());
+            EXPECT_EQ(folly::stringPrintf("old-%d", count), iter->value().ToString());
+            iter->Next();
+            count++;
+        }
+        EXPECT_EQ(count, 5);
+    }
+
+    engine->db_->ReleaseSnapshot(snapshot);
+}
+
 }  // namespace kvstore
 }  // namespace nebula
 

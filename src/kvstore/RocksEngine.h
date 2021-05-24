@@ -89,6 +89,8 @@ protected:
  *************************************************************************/
 class RocksEngine : public KVEngine {
     FRIEND_TEST(RocksEngineTest, SimpleTest);
+    FRIEND_TEST(RocksEngineTest, TailingTest);
+    FRIEND_TEST(RocksEngineTest, SnapshotTest);
 
 public:
     RocksEngine(GraphSpaceID spaceId,
