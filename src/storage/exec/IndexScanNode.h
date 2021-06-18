@@ -40,14 +40,14 @@ public:
         }
     }
 
-    nebula::cpp2::ErrorCode execute(PartitionID partId) override {
+    ErrorCode execute(PartitionID partId) override {
         auto ret = RelNode<T>::execute(partId);
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             return ret;
         }
         auto scanRet = scanStr(partId);
         if (!scanRet.ok()) {
-            return nebula::cpp2::ErrorCode::E_INVALID_FIELD_VALUE;
+            return ErrorCode::E_STORAGE_INDEX_NOT_FOUND;
         }
         scanPair_ = scanRet.value();
         std::unique_ptr<kvstore::KVIterator> iter;
@@ -56,7 +56,7 @@ public:
                   scanPair_.first, scanPair_.second, &iter)
               : planContext_->env_->kvstore_->prefix(planContext_->spaceId_, partId,
                   scanPair_.first, &iter);
-        if (ret == nebula::cpp2::ErrorCode::SUCCEEDED && iter && iter->valid()) {
+        if (ret == ErrorCode::SUCCEEDED && iter && iter->valid()) {
             planContext_->isEdge_
             ? iter_.reset(new EdgeIndexIterator(std::move(iter), planContext_->vIdLen_))
             : iter_.reset(new VertexIndexIterator(std::move(iter), planContext_->vIdLen_));
@@ -64,7 +64,7 @@ public:
             iter_.reset();
             return ret;
         }
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
     IndexIterator* iterator() {

@@ -87,8 +87,8 @@ public:
                 }
             }
             env->kvstore_->asyncMultiPut(spaceId, partId, std::move(data),
-                                        [&](nebula::cpp2::ErrorCode code) {
-                                            EXPECT_EQ(code, nebula::cpp2::ErrorCode::SUCCEEDED);
+                                        [&](ErrorCode code) {
+                                            EXPECT_EQ(code, ErrorCode::SUCCEEDED);
                                             count.fetch_sub(1);
                                             if (count.load() == 0) {
                                                 baton.post();
@@ -98,7 +98,7 @@ public:
         baton.wait();
         if (FLAGS_enable_rocksdb_prefix_filtering) {
             auto code = env->kvstore_->flush(spaceId);
-            EXPECT_EQ(code, nebula::cpp2::ErrorCode::SUCCEEDED);
+            EXPECT_EQ(code, ErrorCode::SUCCEEDED);
         }
         return true;
     }
@@ -170,8 +170,8 @@ public:
                 }
             }
             env->kvstore_->asyncMultiPut(spaceId, partId, std::move(data),
-                                        [&](nebula::cpp2::ErrorCode code) {
-                                            EXPECT_EQ(code, nebula::cpp2::ErrorCode::SUCCEEDED);
+                                        [&](ErrorCode code) {
+                                            EXPECT_EQ(code, ErrorCode::SUCCEEDED);
                                             count.fetch_sub(1);
                                             if (count.load() == 0) {
                                                 baton.post();
@@ -181,7 +181,7 @@ public:
         baton.wait();
         if (FLAGS_enable_rocksdb_prefix_filtering) {
             auto code = env->kvstore_->flush(spaceId);
-            EXPECT_EQ(code, nebula::cpp2::ErrorCode::SUCCEEDED);
+            EXPECT_EQ(code, ErrorCode::SUCCEEDED);
         }
         return true;
     }
@@ -216,8 +216,8 @@ public:
                 EXPECT_TRUE(encode(schema.get(), key, edge.props_, data));
             }
             env->kvstore_->asyncMultiPut(spaceId, partId, std::move(data),
-                                        [&](nebula::cpp2::ErrorCode code) {
-                                            EXPECT_EQ(code, nebula::cpp2::ErrorCode::SUCCEEDED);
+                                        [&](ErrorCode code) {
+                                            EXPECT_EQ(code, ErrorCode::SUCCEEDED);
                                             count.fetch_sub(1);
                                             if (count.load() == 0) {
                                                 baton.post();
@@ -235,13 +235,13 @@ public:
         RowWriterV2 writer(schema);
         for (size_t i = 0; i < props.size(); i++) {
             auto r = writer.setValue(i, props[i]);
-            if (r != WriteResult::SUCCEEDED) {
+            if (r != ErrorCode::SUCCEEDED) {
                 LOG(ERROR) << "Invalid prop " << i;
                 return false;
             }
         }
         auto ret = writer.finish();
-        if (ret != WriteResult::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             LOG(ERROR) << "Failed to write data";
             return false;
         }

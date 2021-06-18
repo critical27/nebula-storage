@@ -28,8 +28,8 @@ void AddHostIntoZoneProcessor::process(const cpp2::AddHostIntoZoneReq& req) {
     auto zoneValueRet = doGet(std::move(zoneKey));
      if (!nebula::ok(zoneValueRet)) {
         auto retCode = nebula::error(zoneValueRet);
-        if (retCode == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
-            retCode = nebula::cpp2::ErrorCode::E_ZONE_NOT_FOUND;
+        if (retCode == ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND) {
+            retCode = ErrorCode::E_META_ZONE_NOT_FOUND;
         }
         LOG(ERROR) << "Get zone " << zoneName << " failed, error "
                    << apache::thrift::util::enumNameSafe(retCode);
@@ -58,7 +58,7 @@ void AddHostIntoZoneProcessor::process(const cpp2::AddHostIntoZoneReq& req) {
         auto hostIter = std::find(zoneHosts.begin(), zoneHosts.end(), host);
         if (hostIter != zoneHosts.end()) {
             LOG(ERROR) << "Host overlap found in zone " << name;
-            handleErrorCode(nebula::cpp2::ErrorCode::E_EXISTED);
+            handleErrorCode(ErrorCode::E_META_ZONE_EXISTED);
             onFinished();
             return;
         }
@@ -78,7 +78,7 @@ void AddHostIntoZoneProcessor::process(const cpp2::AddHostIntoZoneReq& req) {
     auto found = std::find(activeHosts.begin(), activeHosts.end(), host);
     if (found == activeHosts.end()) {
         LOG(ERROR) << "Host " << host << " not exist";
-        handleErrorCode(nebula::cpp2::ErrorCode::E_INVALID_PARM);
+        handleErrorCode(ErrorCode::E_META_ZONE_HOST_NOT_FOUND);
         onFinished();
         return;
     }
@@ -107,8 +107,8 @@ void DropHostFromZoneProcessor::process(const cpp2::DropHostFromZoneReq& req) {
     auto zoneValueRet = doGet(std::move(zoneKey));
     if (!nebula::ok(zoneValueRet)) {
         auto retCode = nebula::error(zoneValueRet);
-        if (retCode == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
-            retCode = nebula::cpp2::ErrorCode::E_ZONE_NOT_FOUND;
+        if (retCode == ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND) {
+            retCode = ErrorCode::E_META_ZONE_NOT_FOUND;
         }
         LOG(ERROR) << "Get zone " << zoneName << " failed, error: "
                    << apache::thrift::util::enumNameSafe(retCode);
@@ -122,7 +122,7 @@ void DropHostFromZoneProcessor::process(const cpp2::DropHostFromZoneReq& req) {
     auto iter = std::find(hosts.begin(), hosts.end(), host);
     if (iter == hosts.end()) {
         LOG(ERROR) << "Host " << host << " not exist in the zone " << zoneName;
-        handleErrorCode(nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND);
+        handleErrorCode(ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND);
         onFinished();
         return;
     }

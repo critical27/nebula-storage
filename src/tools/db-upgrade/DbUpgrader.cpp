@@ -209,7 +209,7 @@ void UpgraderSpace::runPartV1() {
         const auto& prefix = NebulaKeyUtilsV1::prefix(partId);
         std::unique_ptr<kvstore::KVIterator> iter;
         auto retCode = readEngine_->prefix(prefix, &iter);
-        if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (retCode != ErrorCode::SUCCEEDED) {
             LOG(ERROR) << "Space id " << spaceId_ << " part " << partId
                        << " no found!";
             LOG(ERROR) << "Handle vertex/edge/index data in space id " << spaceId_
@@ -341,7 +341,7 @@ void UpgraderSpace::runPartV1() {
             if (data.size() >= FLAGS_write_batch_num) {
                 VLOG(2) << "Send record total rows " << data.size();
                 auto code = writeEngine_->multiPut(data);
-                if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+                if (code != ErrorCode::SUCCEEDED) {
                     LOG(FATAL) << "Write multi put in space id " << spaceId_
                                << " part id " << partId << " failed.";
                 }
@@ -352,7 +352,7 @@ void UpgraderSpace::runPartV1() {
         }
 
         auto code = writeEngine_->multiPut(data);
-        if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (code != ErrorCode::SUCCEEDED) {
             LOG(FATAL) << "Write multi put in space id " << spaceId_
                        << " part id " << partId << " failed.";
         }
@@ -399,7 +399,7 @@ void UpgraderSpace::doProcessV1() {
         auto prefix = NebulaKeyUtilsV1::systemPrefix();
         std::unique_ptr<kvstore::KVIterator> iter;
         auto retCode = readEngine_->prefix(prefix, &iter);
-        if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (retCode != ErrorCode::SUCCEEDED) {
             LOG(ERROR) << "Space id " << spaceId_ << " get system data failed";
             LOG(ERROR) << "Handle system data in space id " << spaceId_ << " failed";
             return;
@@ -412,7 +412,7 @@ void UpgraderSpace::doProcessV1() {
             if (data.size() >= FLAGS_write_batch_num) {
                 VLOG(2) << "Send system data total rows " << data.size();
                 auto code = writeEngine_->multiPut(data);
-                if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+                if (code != ErrorCode::SUCCEEDED) {
                     LOG(FATAL) << "Write multi put in space id " << spaceId_ << " failed.";
                 }
                 data.clear();
@@ -421,7 +421,7 @@ void UpgraderSpace::doProcessV1() {
         }
 
         auto code = writeEngine_->multiPut(data);
-        if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (code != ErrorCode::SUCCEEDED) {
             LOG(FATAL) << "Write multi put in space id " << spaceId_ << " failed.";
         }
         LOG(INFO) << "Handle system data in space id " << spaceId_ << " success";
@@ -439,7 +439,7 @@ void UpgraderSpace::runPartV2() {
         auto prefix = NebulaKeyUtilsV2::partPrefix(partId);
         std::unique_ptr<kvstore::KVIterator> iter;
         auto retCode = readEngine_->prefix(prefix, &iter);
-        if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (retCode != ErrorCode::SUCCEEDED) {
             LOG(ERROR) << "Space id " << spaceId_ << " part " << partId
                        << " no found!";
             LOG(ERROR) << "Handle vertex/edge/index data in space id " << spaceId_
@@ -567,7 +567,7 @@ void UpgraderSpace::runPartV2() {
             if (data.size() >= FLAGS_write_batch_num) {
                 VLOG(2) << "Send record total rows " << data.size();
                 auto code = writeEngine_->multiPut(data);
-                if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+                if (code != ErrorCode::SUCCEEDED) {
                     LOG(FATAL) << "Write multi put in space id " << spaceId_
                                << " part id " << partId << " failed.";
                 }
@@ -578,7 +578,7 @@ void UpgraderSpace::runPartV2() {
         }
 
         auto code = writeEngine_->multiPut(data);
-        if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (code != ErrorCode::SUCCEEDED) {
             LOG(FATAL) << "Write multi put in space id " << spaceId_
                        << " part id " << partId << " failed.";
         }
@@ -624,7 +624,7 @@ void UpgraderSpace::doProcessV2() {
         auto prefix = NebulaKeyUtilsV2::systemPrefix();
         std::unique_ptr<kvstore::KVIterator> iter;
         auto retCode = readEngine_->prefix(prefix, &iter);
-        if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (retCode != ErrorCode::SUCCEEDED) {
             LOG(ERROR) << "Space id " << spaceId_ << " get system data failed.";
             LOG(ERROR) << "Handle system data in space id " << spaceId_ << " failed.";
             return;
@@ -637,7 +637,7 @@ void UpgraderSpace::doProcessV2() {
             if (data.size() >= FLAGS_write_batch_num) {
                 VLOG(2) << "Send system data total rows " << data.size();
                 auto code = writeEngine_->multiPut(data);
-                if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+                if (code != ErrorCode::SUCCEEDED) {
                     LOG(FATAL) << "Write multi put in space id " << spaceId_ << " failed.";
                 }
                 data.clear();
@@ -646,7 +646,7 @@ void UpgraderSpace::doProcessV2() {
         }
 
         auto code = writeEngine_->multiPut(data);
-        if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (code != ErrorCode::SUCCEEDED) {
             LOG(FATAL) << "Write multi put in space id " << spaceId_ << " failed.";
         }
         LOG(INFO) << "Handle system data in space id " << spaceId_ << " success";
@@ -691,14 +691,14 @@ void UpgraderSpace::encodeVertexValue(PartitionID partId,
 }
 
 // If the field types are inconsistent, can be converted
-WriteResult UpgraderSpace::convertValue(const meta::NebulaSchemaProvider* nSchema,
+ErrorCode UpgraderSpace::convertValue(const meta::NebulaSchemaProvider* nSchema,
                                         const meta::SchemaProviderIf* oSchema,
                                         std::string& name,
                                         Value& val) {
     auto newpropType = nSchema->getFieldType(name);
     auto oldpropType = oSchema->getFieldType(name);
     if (newpropType == oldpropType) {
-        return WriteResult::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
     bool bval;
@@ -709,7 +709,7 @@ WriteResult UpgraderSpace::convertValue(const meta::NebulaSchemaProvider* nSchem
     // need convert
     switch (val.type()) {
         case Value::Type::NULLVALUE:
-            return WriteResult::SUCCEEDED;;
+            return ErrorCode::SUCCEEDED;;
         case Value::Type::BOOL: {
             switch (newpropType) {
                 case meta::cpp2::PropertyType::INT8:
@@ -724,7 +724,7 @@ WriteResult UpgraderSpace::convertValue(const meta::NebulaSchemaProvider* nSchem
                     } else {
                         val.setInt(0);
                     }
-                    return WriteResult::SUCCEEDED;
+                    return ErrorCode::SUCCEEDED;
                 }
                 case meta::cpp2::PropertyType::STRING:
                 case meta::cpp2::PropertyType::FIXED_STRING: {
@@ -732,9 +732,9 @@ WriteResult UpgraderSpace::convertValue(const meta::NebulaSchemaProvider* nSchem
                         bval = val.getBool();
                         sval = folly::to<std::string>(bval);
                         val.setStr(sval);
-                        return WriteResult::SUCCEEDED;
+                        return ErrorCode::SUCCEEDED;
                     } catch (const std::exception& e) {
-                        return WriteResult::TYPE_MISMATCH;
+                        return ErrorCode::E_STORAGE_CODEC_TYPE_MISMATCH;
                     }
                 }
                 case meta::cpp2::PropertyType::FLOAT:
@@ -743,14 +743,14 @@ WriteResult UpgraderSpace::convertValue(const meta::NebulaSchemaProvider* nSchem
                         bval = val.getBool();
                         fval = folly::to<double>(bval);
                         val.setFloat(fval);
-                        return WriteResult::SUCCEEDED;
+                        return ErrorCode::SUCCEEDED;
                     } catch (const std::exception& e) {
-                        return WriteResult::TYPE_MISMATCH;
+                        return ErrorCode::E_STORAGE_CODEC_TYPE_MISMATCH;
                     }
                 }
                 // other not need convert
                 default:
-                    return WriteResult::SUCCEEDED;
+                    return ErrorCode::SUCCEEDED;
             }
         }
         case Value::Type::INT: {
@@ -761,14 +761,14 @@ WriteResult UpgraderSpace::convertValue(const meta::NebulaSchemaProvider* nSchem
                        ival = val.getInt();
                        sval = folly::to<std::string>(ival);
                        val.setStr(sval);
-                       return WriteResult::SUCCEEDED;
+                       return ErrorCode::SUCCEEDED;
                     } catch (const std::exception& e) {
-                        return WriteResult::TYPE_MISMATCH;
+                        return ErrorCode::E_STORAGE_CODEC_TYPE_MISMATCH;
                     }
                 }
                 // other not need convert
                 default:
-                    return WriteResult::SUCCEEDED;
+                    return ErrorCode::SUCCEEDED;
             }
         }
         case Value::Type::FLOAT: {
@@ -779,9 +779,9 @@ WriteResult UpgraderSpace::convertValue(const meta::NebulaSchemaProvider* nSchem
                         fval = val.getFloat();
                         sval = folly::to<std::string>(fval);
                         val.setStr(sval);
-                        return WriteResult::SUCCEEDED;
+                        return ErrorCode::SUCCEEDED;
                     } catch (const std::exception& e) {
-                        return WriteResult::TYPE_MISMATCH;
+                        return ErrorCode::E_STORAGE_CODEC_TYPE_MISMATCH;
                     }
                 }
                 case meta::cpp2::PropertyType::BOOL: {
@@ -789,14 +789,14 @@ WriteResult UpgraderSpace::convertValue(const meta::NebulaSchemaProvider* nSchem
                         fval = val.getFloat();
                         bval = folly::to<bool>(fval);
                         val.setBool(bval);
-                        return WriteResult::SUCCEEDED;
+                        return ErrorCode::SUCCEEDED;
                     } catch (const std::exception& e) {
-                        return WriteResult::TYPE_MISMATCH;
+                        return ErrorCode::E_STORAGE_CODEC_TYPE_MISMATCH;
                     }
                 }
                 // other not need convert
                 default:
-                    return WriteResult::SUCCEEDED;
+                    return ErrorCode::SUCCEEDED;
             }
         }
         case Value::Type::STRING: {
@@ -811,9 +811,9 @@ WriteResult UpgraderSpace::convertValue(const meta::NebulaSchemaProvider* nSchem
                         sval = val.getStr();
                         ival = folly::to<int64_t>(sval);
                         val.setInt(ival);
-                        return WriteResult::SUCCEEDED;
+                        return ErrorCode::SUCCEEDED;
                     } catch (const std::exception& e) {
-                        return WriteResult::TYPE_MISMATCH;
+                        return ErrorCode::E_STORAGE_CODEC_TYPE_MISMATCH;
                     }
                 }
                 case meta::cpp2::PropertyType::BOOL: {
@@ -821,9 +821,9 @@ WriteResult UpgraderSpace::convertValue(const meta::NebulaSchemaProvider* nSchem
                         sval = val.getStr();
                         bval = folly::to<bool>(sval);
                         val.setBool(bval);
-                        return WriteResult::SUCCEEDED;
+                        return ErrorCode::SUCCEEDED;
                     } catch (const std::exception& e) {
-                        return WriteResult::TYPE_MISMATCH;
+                        return ErrorCode::E_STORAGE_CODEC_TYPE_MISMATCH;
                     }
                 }
                 case meta::cpp2::PropertyType::FLOAT:
@@ -832,19 +832,19 @@ WriteResult UpgraderSpace::convertValue(const meta::NebulaSchemaProvider* nSchem
                         sval = val.getStr();
                         fval = folly::to<double>(sval);
                         val.setFloat(fval);
-                        return WriteResult::SUCCEEDED;
+                        return ErrorCode::SUCCEEDED;
                     } catch (const std::exception& e) {
-                        return WriteResult::TYPE_MISMATCH;
+                        return ErrorCode::E_STORAGE_CODEC_TYPE_MISMATCH;
                     }
                 }
                 // other not need convert
                 default:
-                    return WriteResult::SUCCEEDED;
+                    return ErrorCode::SUCCEEDED;
             }
         }
         // other not need convert
         default:
-            return WriteResult::SUCCEEDED;
+            return ErrorCode::SUCCEEDED;
     }
 }
 
@@ -860,7 +860,7 @@ std::string UpgraderSpace::encodeRowVal(const RowReader* reader,
     }
 
     // encode v2 value, use new schema
-    WriteResult wRet;
+    ErrorCode wRet;
     RowWriterV2 rowWrite(schema);
 
     // fieldName contains all the fields of the latest schema.
@@ -871,12 +871,12 @@ std::string UpgraderSpace::encodeRowVal(const RowReader* reader,
         if (val.type() != Value::Type::NULLVALUE) {
             // If the field types are inconsistent, can be converted
             wRet = convertValue(schema, oldSchema, name, val);
-            if (wRet != WriteResult::SUCCEEDED) {
+            if (wRet != ErrorCode::SUCCEEDED) {
                 LOG(ERROR)  << "Convert value failed";
                 return "";
             }
             wRet = rowWrite.setValue(name, val);
-            if (wRet != WriteResult::SUCCEEDED) {
+            if (wRet != ErrorCode::SUCCEEDED) {
                 LOG(ERROR)  << "Write rowWriterV2 failed";
                 return "";
             }
@@ -885,7 +885,7 @@ std::string UpgraderSpace::encodeRowVal(const RowReader* reader,
             auto nullType = val.getNull();
             if (nullType == NullType::__NULL__) {
                 wRet = rowWrite.setValue(name, val);
-                if (wRet != WriteResult::SUCCEEDED) {
+                if (wRet != ErrorCode::SUCCEEDED) {
                     LOG(ERROR)  << "Write rowWriterV2 failed";
                     return "";
                 }
@@ -899,7 +899,7 @@ std::string UpgraderSpace::encodeRowVal(const RowReader* reader,
     }
 
     wRet = rowWrite.finish();
-    if (wRet != WriteResult::SUCCEEDED) {
+    if (wRet != ErrorCode::SUCCEEDED) {
         LOG(ERROR)  << "Write rowWriterV2 failed";
         return "";
     }
@@ -990,7 +990,7 @@ void UpgraderSpace::doCompaction() {
     LOG(INFO) << "Path " << dstPath_ << " space id " << spaceId_
               << " compaction begin";
     auto ret = writeEngine_->compact();
-    if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (ret != ErrorCode::SUCCEEDED) {
         LOG(ERROR) << "Path " << dstPath_ << " space id " << spaceId_
                    << " compaction failed!";
     }

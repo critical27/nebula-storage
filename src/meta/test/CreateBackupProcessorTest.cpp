@@ -153,8 +153,8 @@ TEST(ProcessorTest, CreateBackupTest) {
                           MetaServiceUtils::partVal(hosts2));
     }
     folly::Baton<true, std::atomic> baton;
-    kv->asyncMultiPut(0, 0, std::move(data), [&](nebula::cpp2::ErrorCode code) {
-        ret = (code == nebula::cpp2::ErrorCode::SUCCEEDED);
+    kv->asyncMultiPut(0, 0, std::move(data), [&](ErrorCode code) {
+        ret = (code == ErrorCode::SUCCEEDED);
         baton.post();
     });
     baton.wait();
@@ -170,7 +170,7 @@ TEST(ProcessorTest, CreateBackupTest) {
         processor->process(req);
         auto resp = std::move(f).get();
         LOG(INFO) << folly::to<int>(resp.get_code());
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_code());
         auto meta = resp.get_meta();
 
         auto metaFiles = meta.get_meta_files();

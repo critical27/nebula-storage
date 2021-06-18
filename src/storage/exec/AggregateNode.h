@@ -46,23 +46,23 @@ public:
         , planContext_(planCtx)
         , edgeContext_(edgeContext) {}
 
-    nebula::cpp2::ErrorCode execute(PartitionID partId, const T& input) override {
+    ErrorCode execute(PartitionID partId, const T& input) override {
         auto ret = RelNode<T>::execute(partId, input);
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             return ret;
         }
 
         CHECK_GT(edgeContext_->statCount_, 0);
         initStatValue(edgeContext_);
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
-    nebula::cpp2::ErrorCode execute(PartitionID partId) override {
+    ErrorCode execute(PartitionID partId) override {
         auto ret = RelNode<T>::execute(partId);
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             return ret;
         }
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
     void next() override {
@@ -125,7 +125,7 @@ private:
         }
     }
 
-    nebula::cpp2::ErrorCode collectEdgeStats(folly::StringPiece key,
+    ErrorCode collectEdgeStats(folly::StringPiece key,
                                      RowReader* reader,
                                      const std::vector<PropContext>* props) {
         for (const auto& prop : *props) {
@@ -135,13 +135,13 @@ private:
                     auto value = QueryUtils::readEdgeProp(
                         key, planContext_->vIdLen_, planContext_->isIntId_, reader, prop);
                     if (!value.ok()) {
-                        return nebula::cpp2::ErrorCode::E_EDGE_PROP_NOT_FOUND;
+                        return ErrorCode::E_STORAGE_QUERY_READ_EDGE_PROP_FAILED;
                     }
                     addStatValue(std::move(value).value(), stats_[statIndex]);
                 }
             }
         }
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
     void addStatValue(const Value& value, PropStat& stat) {

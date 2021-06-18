@@ -26,7 +26,7 @@ private:
     StatusOr<std::shared_ptr<meta::cpp2::IndexItem>>
     getIndex(GraphSpaceID space, IndexID index) override;
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     buildIndexGlobal(GraphSpaceID space,
                      PartitionID part,
                      const IndexItems& items) override;

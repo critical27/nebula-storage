@@ -31,7 +31,7 @@ public:
 };
 
 using KV = std::pair<std::string, std::string>;
-using KVCallback = folly::Function<void(nebula::cpp2::ErrorCode code)>;
+using KVCallback = folly::Function<void(ErrorCode code)>;
 using NewLeaderCallback = folly::Function<void(HostAddr nLeader)>;
 
 inline rocksdb::Slice toSlice(const folly::StringPiece& str) {

@@ -15,7 +15,7 @@ void AddGroupProcessor::process(const cpp2::AddGroupReq& req) {
     auto zoneNames = req.get_zone_names();
     if (zoneNames.empty()) {
         LOG(ERROR) << "The zone names should not be empty.";
-        handleErrorCode(nebula::cpp2::ErrorCode::E_INVALID_PARM);
+        handleErrorCode(ErrorCode::E_META_GROUP_NO_ZONES);
         onFinished();
         return;
     }
@@ -23,7 +23,7 @@ void AddGroupProcessor::process(const cpp2::AddGroupReq& req) {
     std::set<std::string> zoneSet(zoneNames.begin(), zoneNames.end());
     if (zoneNames.size() != zoneSet.size()) {
         LOG(ERROR) << "Conflict zone found in the group.";
-        handleErrorCode(nebula::cpp2::ErrorCode::E_CONFLICT);
+        handleErrorCode(ErrorCode::E_META_GROUP_CONFLICT_ZONE);
         onFinished();
         return;
     }
@@ -50,14 +50,14 @@ void AddGroupProcessor::process(const cpp2::AddGroupReq& req) {
     for (auto name = zoneNames.begin(); name != zoneNames.end(); name++) {
         if (std::find(zones.begin(), zones.end(), *name) == zones.end()) {
             LOG(ERROR) << "Zone: " << *name << " not existed";
-            handleErrorCode(nebula::cpp2::ErrorCode::E_ZONE_NOT_FOUND);
+            handleErrorCode(ErrorCode::E_META_ZONE_NOT_FOUND);
             onFinished();
             return;
         }
     }
 
     auto retCode = checkGroupRedundancy(zoneNames);
-    if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (retCode != ErrorCode::SUCCEEDED) {
         handleErrorCode(retCode);
         onFinished();
         return;
@@ -66,12 +66,12 @@ void AddGroupProcessor::process(const cpp2::AddGroupReq& req) {
     auto groupRet = getGroupId(groupName);
     if (nebula::ok(groupRet)) {
         LOG(ERROR) << "Group " << groupName << " already existed";
-        handleErrorCode(nebula::cpp2::ErrorCode::E_EXISTED);
+        handleErrorCode(ErrorCode::E_META_GROUP_EXISTED);
         onFinished();
         return;
     } else {
         retCode = nebula::error(groupRet);
-        if (retCode != nebula::cpp2::ErrorCode::E_GROUP_NOT_FOUND) {
+        if (retCode != ErrorCode::E_GROUP_NOT_FOUND) {
             LOG(ERROR) << "Create Group failed, group name " << groupName << " error: "
                        << apache::thrift::util::enumNameSafe(retCode);
             handleErrorCode(retCode);
@@ -99,7 +99,7 @@ void AddGroupProcessor::process(const cpp2::AddGroupReq& req) {
     doSyncPutAndUpdate(std::move(data));
 }
 
-nebula::cpp2::ErrorCode
+ErrorCode
 AddGroupProcessor::checkGroupRedundancy(std::vector<std::string> zones) {
     const auto& prefix = MetaServiceUtils::groupPrefix();
     auto iterRet = doPrefix(prefix);
@@ -118,11 +118,11 @@ AddGroupProcessor::checkGroupRedundancy(std::vector<std::string> zones) {
         if (zones == zoneNames) {
             LOG(ERROR) << "Group " << groupName
                        << " have created, although the zones order maybe not the same";
-            return nebula::cpp2::ErrorCode::E_EXISTED;
+            return ErrorCode::E_META_GROUP_EXISTED;
         }
         iter->next();
     }
-    return nebula::cpp2::ErrorCode::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 }  // namespace meta

@@ -10,8 +10,6 @@
 #include "meta/test/TestUtils.h"
 #include "meta/processors/admin/HBProcessor.h"
 
-DECLARE_bool(hosts_whitelist_enabled);
-
 namespace nebula {
 namespace meta {
 
@@ -30,7 +28,7 @@ TEST(HBProcessorTest, HBTest) {
             auto f = processor->getFuture();
             processor->process(req);
             auto resp = std::move(f).get();
-            ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+            ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_code());
         }
 
         auto hostsRet =  ActiveHostsMan::getActiveHosts(kv.get(), 1);;
@@ -50,7 +48,7 @@ TEST(HBProcessorTest, HBTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_WRONGCLUSTER, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_ADMIN_WRONG_CLUSTER, resp.get_code());
     }
 }
 

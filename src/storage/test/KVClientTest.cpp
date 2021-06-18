@@ -85,11 +85,11 @@ TEST(KVClientTest, SimpleTest) {
         LOG(INFO) << "Get failed because some key not exists";
         if (!resp.failedParts().empty()) {
             for (const auto& partEntry : resp.failedParts()) {
-                EXPECT_EQ(partEntry.second, nebula::cpp2::ErrorCode::E_PARTIAL_RESULT);
+                EXPECT_EQ(partEntry.second, ErrorCode::E_STORAGE_KVSTORE_PARTIAL_RESULT);
             }
         }
         // Can not checkResult, because some part get all keys indeed, and other
-        // part return E_PARTIAL_RESULT
+        // part return E_STORAGE_KVSTORE_PARTIAL_RESULT
     }
     {
         std::vector<std::string> keys;
@@ -116,7 +116,7 @@ TEST(KVClientTest, SimpleTest) {
         LOG(INFO) << "Get failed because some key not exists";
         if (!resp.failedParts().empty()) {
             for (const auto& partEntry : resp.failedParts()) {
-                EXPECT_EQ(partEntry.second, nebula::cpp2::ErrorCode::E_PARTIAL_RESULT);
+                EXPECT_EQ(partEntry.second, ErrorCode::E_STORAGE_KVSTORE_PARTIAL_RESULT);
             }
         }
         checkResult(resp, 0);

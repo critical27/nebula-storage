@@ -13,17 +13,6 @@
 
 namespace nebula {
 
-enum class WriteResult {
-    SUCCEEDED = 0,
-    UNKNOWN_FIELD = -1,
-    TYPE_MISMATCH = -2,
-    OUT_OF_RANGE = -3,
-    NOT_NULLABLE = -4,
-    FIELD_UNSET = -5,
-    INCORRECT_VALUE = -6,
-};
-
-
 /********************************************************************************
 
   Encoder version 2
@@ -115,35 +104,35 @@ public:
         return std::move(buf_);
     }
 
-    WriteResult finish() noexcept;
+    ErrorCode finish() noexcept;
 
     // Data write
     template<typename T>
-    WriteResult set(size_t index, T&& v) noexcept {
+    ErrorCode set(size_t index, T&& v) noexcept {
         CHECK(!finished_) << "You have called finish()";
         if (index >= schema_->getNumFields()) {
-            return WriteResult::UNKNOWN_FIELD;
+            return ErrorCode::E_STORAGE_CODEC_UNKNOWN_FIELD;
         }
         return write(index, std::forward<T>(v));
     }
 
     // Data write
     template<typename T>
-    WriteResult set(const std::string &name, T&& v) noexcept {
+    ErrorCode set(const std::string &name, T&& v) noexcept {
         CHECK(!finished_) << "You have called finish()";
         int64_t index = schema_->getFieldIndex(name);
         if (index >= 0) {
             return write(static_cast<size_t>(index), std::forward<T>(v));
         } else {
-            return WriteResult::UNKNOWN_FIELD;
+            return ErrorCode::E_STORAGE_CODEC_UNKNOWN_FIELD;
         }
     }
 
-    WriteResult setValue(ssize_t index, const Value& val) noexcept;
-    WriteResult setValue(const std::string &name, const Value& val) noexcept;
+    ErrorCode setValue(ssize_t index, const Value& val) noexcept;
+    ErrorCode setValue(const std::string &name, const Value& val) noexcept;
 
-    WriteResult setNull(ssize_t index) noexcept;
-    WriteResult setNull(const std::string &name) noexcept;
+    ErrorCode setNull(ssize_t index) noexcept;
+    ErrorCode setNull(const std::string &name) noexcept;
 
 private:
     const meta::SchemaProviderIf* schema_;
@@ -162,7 +151,7 @@ private:
     bool outOfSpaceStr_;
     std::vector<std::string> strList_;
 
-    WriteResult checkUnsetFields() noexcept;
+    ErrorCode checkUnsetFields() noexcept;
     std::string processOutOfSpace() noexcept;
 
     void processV2EncodedStr() noexcept;
@@ -173,26 +162,26 @@ private:
     // otherwise, return false
     bool checkNullBit(ssize_t pos) const noexcept;
 
-    WriteResult write(ssize_t index, bool v) noexcept;
-    WriteResult write(ssize_t index, float v) noexcept;
-    WriteResult write(ssize_t index, double v) noexcept;
+    ErrorCode write(ssize_t index, bool v) noexcept;
+    ErrorCode write(ssize_t index, float v) noexcept;
+    ErrorCode write(ssize_t index, double v) noexcept;
 
-    WriteResult write(ssize_t index, int8_t v) noexcept;
-    WriteResult write(ssize_t index, int16_t v) noexcept;
-    WriteResult write(ssize_t index, int32_t v) noexcept;
-    WriteResult write(ssize_t index, int64_t v) noexcept;
-    WriteResult write(ssize_t index, uint8_t v) noexcept;
-    WriteResult write(ssize_t index, uint16_t v) noexcept;
-    WriteResult write(ssize_t index, uint32_t v) noexcept;
-    WriteResult write(ssize_t index, uint64_t v) noexcept;
+    ErrorCode write(ssize_t index, int8_t v) noexcept;
+    ErrorCode write(ssize_t index, int16_t v) noexcept;
+    ErrorCode write(ssize_t index, int32_t v) noexcept;
+    ErrorCode write(ssize_t index, int64_t v) noexcept;
+    ErrorCode write(ssize_t index, uint8_t v) noexcept;
+    ErrorCode write(ssize_t index, uint16_t v) noexcept;
+    ErrorCode write(ssize_t index, uint32_t v) noexcept;
+    ErrorCode write(ssize_t index, uint64_t v) noexcept;
 
-    WriteResult write(ssize_t index, const std::string& v) noexcept;
-    WriteResult write(ssize_t index, folly::StringPiece v) noexcept;
-    WriteResult write(ssize_t index, const char* v) noexcept;
+    ErrorCode write(ssize_t index, const std::string& v) noexcept;
+    ErrorCode write(ssize_t index, folly::StringPiece v) noexcept;
+    ErrorCode write(ssize_t index, const char* v) noexcept;
 
-    WriteResult write(ssize_t index, const Date& v) noexcept;
-    WriteResult write(ssize_t index, const Time& v) noexcept;
-    WriteResult write(ssize_t index, const DateTime& v) noexcept;
+    ErrorCode write(ssize_t index, const Date& v) noexcept;
+    ErrorCode write(ssize_t index, const Time& v) noexcept;
+    ErrorCode write(ssize_t index, const DateTime& v) noexcept;
 };
 
 }  // namespace nebula

@@ -35,7 +35,7 @@ void ListSpacesProcessor::process(const cpp2::ListSpacesReq&) {
         iter->next();
     }
 
-    handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
+    handleErrorCode(ErrorCode::SUCCEEDED);
     resp_.set_spaces(std::move(spaces));
     onFinished();
 }

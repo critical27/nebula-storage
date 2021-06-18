@@ -37,7 +37,7 @@ void UpdateEdgeProcessor::doProcess(const cpp2::UpdateEdgeRequest& req) {
     }
 
     auto retCode = getSpaceVidLen(spaceId_);
-    if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (retCode != ErrorCode::SUCCEEDED) {
         pushResultCode(retCode, partId);
         onFinished();
         return;
@@ -49,7 +49,7 @@ void UpdateEdgeProcessor::doProcess(const cpp2::UpdateEdgeRequest& req) {
                    << " space vid len: " << spaceVidLen_
                    << ",  edge srcVid: " << edgeKey_.get_src()
                    << " dstVid: " << edgeKey_.get_dst();
-        pushResultCode(nebula::cpp2::ErrorCode::E_INVALID_VID, partId);
+        pushResultCode(ErrorCode::E_STORAGE_QUERY_INVALID_VID_LEN, partId);
         onFinished();
         return;
     }
@@ -59,7 +59,7 @@ void UpdateEdgeProcessor::doProcess(const cpp2::UpdateEdgeRequest& req) {
         planContext_->defaultEdgeVer_ = 1L;
     }
     retCode = checkAndBuildContexts(req);
-    if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (retCode != ErrorCode::SUCCEEDED) {
         LOG(ERROR) << "Failure build contexts: " << apache::thrift::util::enumNameSafe(retCode);
         pushResultCode(retCode, partId);
         onFinished();
@@ -70,7 +70,7 @@ void UpdateEdgeProcessor::doProcess(const cpp2::UpdateEdgeRequest& req) {
     auto iRet = env_->indexMan_->getEdgeIndexes(spaceId_);
     if (!iRet.ok()) {
         LOG(ERROR) << iRet.status();
-        pushResultCode(nebula::cpp2::ErrorCode::E_SPACE_NOT_FOUND, partId);
+        pushResultCode(ErrorCode::E_STORAGE_INDEX_NOT_FOUND, partId);
         onFinished();
         return;
     }
@@ -83,9 +83,9 @@ void UpdateEdgeProcessor::doProcess(const cpp2::UpdateEdgeRequest& req) {
     auto plan = buildPlan(&resultDataSet_);
 
     auto ret = plan.go(partId, edgeKey_);
-    if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (ret != ErrorCode::SUCCEEDED) {
         handleErrorCode(ret, spaceId_, partId);
-        if (ret == nebula::cpp2::ErrorCode::E_FILTER_OUT) {
+        if (ret == ErrorCode::E_STORAGE_QUERY_FILTER_NOT_PASSED) {
             onProcessFinished();
         }
     } else {
@@ -95,23 +95,23 @@ void UpdateEdgeProcessor::doProcess(const cpp2::UpdateEdgeRequest& req) {
     return;
 }
 
-nebula::cpp2::ErrorCode
+ErrorCode
 UpdateEdgeProcessor::checkAndBuildContexts(const cpp2::UpdateEdgeRequest& req) {
     // Build edgeContext_.schemas_
     auto retCode = buildEdgeSchema();
-    if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (retCode != ErrorCode::SUCCEEDED) {
         return retCode;
     }
 
     // Build edgeContext_.propContexts_ edgeTypeProps_
     retCode = buildEdgeContext(req);
-    if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (retCode != ErrorCode::SUCCEEDED) {
         return retCode;
     }
 
     // Build edgeContext_.ttlInfo_
     buildEdgeTTLInfo();
-    return nebula::cpp2::ErrorCode::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 /*
@@ -170,25 +170,25 @@ StoragePlan<cpp2::EdgeKey> UpdateEdgeProcessor::buildPlan(nebula::DataSet* resul
 }
 
 // Get all edge schema in spaceID
-nebula::cpp2::ErrorCode UpdateEdgeProcessor::buildEdgeSchema() {
+ErrorCode UpdateEdgeProcessor::buildEdgeSchema() {
     auto edges = env_->schemaMan_->getAllVerEdgeSchema(spaceId_);
     if (!edges.ok()) {
-        return nebula::cpp2::ErrorCode::E_SPACE_NOT_FOUND;
+        return ErrorCode::E_STORAGE_SCHEMA_GET_ALL_EDGE_SCHEMA_FAILED;
     }
 
     edgeContext_.schemas_ = std::move(edges).value();
-    return nebula::cpp2::ErrorCode::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 // edgeContext.propContexts_ return prop, filter prop, update prop
-nebula::cpp2::ErrorCode
+ErrorCode
 UpdateEdgeProcessor::buildEdgeContext(const cpp2::UpdateEdgeRequest& req) {
     // Build default edge context
     auto edgeNameRet = env_->schemaMan_->toEdgeName(spaceId_, std::abs(edgeKey_.get_edge_type()));
     if (!edgeNameRet.ok()) {
         VLOG(1) << "Can't find spaceId " << spaceId_ << " edgeType "
                 << std::abs(edgeKey_.get_edge_type());
-        return nebula::cpp2::ErrorCode::E_EDGE_NOT_FOUND;
+        return ErrorCode::E_STORAGE_SCHEMA_EDGE_NOT_FOUND;
     }
     auto edgeName = edgeNameRet.value();
 
@@ -201,7 +201,7 @@ UpdateEdgeProcessor::buildEdgeContext(const cpp2::UpdateEdgeRequest& req) {
     for (auto& edgeProp : updatedProps_) {
         EdgePropertyExpression edgePropExp(edgeName, edgeProp.get_name());
         auto retCode = checkExp(&edgePropExp, false, false);
-        if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (retCode != ErrorCode::SUCCEEDED) {
             VLOG(1) << "Invalid update edge expression!";
             return retCode;
         }
@@ -209,12 +209,12 @@ UpdateEdgeProcessor::buildEdgeContext(const cpp2::UpdateEdgeRequest& req) {
         auto updateExp = Expression::decode(edgeProp.get_value());
         if (!updateExp) {
             VLOG(1) << "Can't decode the prop's value " << edgeProp.get_value();
-            return nebula::cpp2::ErrorCode::E_INVALID_UPDATER;
+            return ErrorCode::E_STORAGE_QUERY_DECODE_FILTER_FAILED;
         }
 
         valueProps_.clear();
         retCode = checkExp(updateExp.get(), false, false, insertable_);
-        if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (retCode != ErrorCode::SUCCEEDED) {
             return retCode;
         }
         if (insertable_) {
@@ -228,10 +228,10 @@ UpdateEdgeProcessor::buildEdgeContext(const cpp2::UpdateEdgeRequest& req) {
             auto colExp = Expression::decode(prop);
             if (!colExp) {
                 VLOG(1) << "Can't decode the return expression";
-                return nebula::cpp2::ErrorCode::E_INVALID_UPDATER;
+                return ErrorCode::E_STORAGE_QUERY_DECODE_FILTER_FAILED;
             }
             auto retCode = checkExp(colExp.get(), true, false);
-            if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+            if (retCode != ErrorCode::SUCCEEDED) {
                 return retCode;
             }
             returnPropsExp_.emplace_back(std::move(colExp));
@@ -245,10 +245,10 @@ UpdateEdgeProcessor::buildEdgeContext(const cpp2::UpdateEdgeRequest& req) {
             filterExp_ = Expression::decode(filterStr);
             if (!filterExp_) {
                 VLOG(1) << "Can't decode the filter " << filterStr;
-                return nebula::cpp2::ErrorCode::E_INVALID_FILTER;
+                return ErrorCode::E_STORAGE_QUERY_DECODE_FILTER_FAILED;
             }
             auto retCode = checkExp(filterExp_.get(), false, true);
-            if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+            if (retCode != ErrorCode::SUCCEEDED) {
                 return retCode;
             }
         }
@@ -260,7 +260,7 @@ UpdateEdgeProcessor::buildEdgeContext(const cpp2::UpdateEdgeRequest& req) {
     if (edgeContext_.edgeNames_.size() != 1 ||
         iter == edgeContext_.edgeNames_.end()) {
         VLOG(1) << "should only contain one edge in update edge!";
-        return nebula::cpp2::ErrorCode::E_MUTATE_EDGE_CONFLICT;
+        return ErrorCode::E_STORAGE_QUERY_UPDATE_MULTIPLE_DATA_NOT_SUPPORTED;
     }
 
     planContext_->edgeType_ = edgeKey_.get_edge_type();
@@ -272,12 +272,12 @@ UpdateEdgeProcessor::buildEdgeContext(const cpp2::UpdateEdgeRequest& req) {
         auto schema = schemas.back().get();
         if (!schema) {
             VLOG(1) << "Fail to get schema in edgeType " << edgeKey_.get_edge_type();
-            return nebula::cpp2::ErrorCode::E_EDGE_NOT_FOUND;
+            return ErrorCode::E_STORAGE_SCHEMA_EDGE_NOT_FOUND;
         }
         planContext_->edgeSchema_ = schema;
     } else {
         VLOG(1) << "Fail to get schema in edgeType " << edgeKey_.get_edge_type();
-        return nebula::cpp2::ErrorCode::E_EDGE_NOT_FOUND;
+        return ErrorCode::E_STORAGE_SCHEMA_EDGE_NOT_FOUND;
     }
 
     if (expCtx_ == nullptr) {
@@ -288,7 +288,7 @@ UpdateEdgeProcessor::buildEdgeContext(const cpp2::UpdateEdgeRequest& req) {
                                                              true);
     }
 
-    return nebula::cpp2::ErrorCode::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 void UpdateEdgeProcessor::onProcessFinished() {

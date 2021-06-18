@@ -10,7 +10,7 @@
 namespace nebula {
 namespace storage {
 
-ErrorOr<nebula::cpp2::ErrorCode, std::vector<AdminSubTask>>
+ErrorOr<ErrorCode, std::vector<AdminSubTask>>
 CompactTask::genSubTasks() {
     std::vector<AdminSubTask> ret;
     if (!env_->kvstore_) {
@@ -32,7 +32,7 @@ CompactTask::genSubTasks() {
     return ret;
 }
 
-nebula::cpp2::ErrorCode CompactTask::subTask(kvstore::KVEngine* engine) {
+ErrorCode CompactTask::subTask(kvstore::KVEngine* engine) {
     return engine->compact();
 }
 

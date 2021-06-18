@@ -26,12 +26,12 @@ private:
 
     // A direct value of true means that data will not be written to follow via the raft protocol,
     // but will be written directly to local disk
-    nebula::cpp2::ErrorCode
+    ErrorCode
     replaceHostInPartition(const HostAddr& ipv4From,
                            const HostAddr& ipv4To,
                            bool direct = false);
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     replaceHostInZone(const HostAddr& ipv4From,
                       const HostAddr& ipv4To,
                       bool direct = false);

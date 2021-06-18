@@ -25,12 +25,12 @@ void DropEdgeProcessor::process(const cpp2::DropEdgeReq& req) {
         resp_.set_id(to(edgeType, EntryType::EDGE));
     } else {
         auto retCode = nebula::error(iRet);
-        if (retCode == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
+        if (retCode == ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND) {
             if (req.get_if_exists()) {
-                retCode = nebula::cpp2::ErrorCode::SUCCEEDED;
+                retCode = ErrorCode::SUCCEEDED;
             } else {
                 LOG(ERROR) << "Drop edge failed :" << edgeName << " not found.";
-                retCode = nebula::cpp2::ErrorCode::E_EDGE_NOT_FOUND;
+                retCode = ErrorCode::E_META_SCHEMA_EDGE_NOT_FOUND;
             }
         } else {
              LOG(ERROR) << "Get edgetype failed, edge name " << edgeName
@@ -49,7 +49,7 @@ void DropEdgeProcessor::process(const cpp2::DropEdgeReq& req) {
     }
     if (!nebula::value(indexes).empty()) {
         LOG(ERROR) << "Drop edge error, index conflict, please delete index first.";
-        handleErrorCode(nebula::cpp2::ErrorCode::E_CONFLICT);
+        handleErrorCode(ErrorCode::E_META_SCHEMA_DROP_FORBIDDEN_WHEN_HAS_INDEX);
         onFinished();
         return;
     }
@@ -58,12 +58,12 @@ void DropEdgeProcessor::process(const cpp2::DropEdgeReq& req) {
     if (nebula::ok(ftIdxRet)) {
         LOG(ERROR) << "Drop edge error, fulltext index conflict, "
                    << "please delete fulltext index first.";
-        handleErrorCode(nebula::cpp2::ErrorCode::E_CONFLICT);
+        handleErrorCode(ErrorCode::E_META_SCHEMA_DROP_FORBIDDEN_WHEN_HAS_FULLTEXT_INDEX);
         onFinished();
         return;
     }
 
-    if (nebula::error(ftIdxRet) != nebula::cpp2::ErrorCode::E_INDEX_NOT_FOUND) {
+    if (nebula::error(ftIdxRet) != ErrorCode::E_META_FULLTEXT_INDEX_NOT_FOUND) {
         handleErrorCode(nebula::error(ftIdxRet));
         onFinished();
         return;
@@ -82,7 +82,7 @@ void DropEdgeProcessor::process(const cpp2::DropEdgeReq& req) {
     doSyncMultiRemoveAndUpdate(std::move(keys));
 }
 
-ErrorOr<nebula::cpp2::ErrorCode, std::vector<std::string>>
+ErrorOr<ErrorCode, std::vector<std::string>>
 DropEdgeProcessor::getEdgeKeys(GraphSpaceID id, EdgeType edgeType) {
     std::vector<std::string> keys;
     auto key = MetaServiceUtils::schemaEdgePrefix(id, edgeType);

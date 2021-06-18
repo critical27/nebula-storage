@@ -15,7 +15,7 @@ void BaseProcessor<RESP>::doPut(std::vector<kvstore::KV> data) {
     kvstore_->asyncMultiPut(kDefaultSpaceId,
                             kDefaultPartId,
                             std::move(data),
-                            [this, &baton] (nebula::cpp2::ErrorCode code) {
+                            [this, &baton] (ErrorCode code) {
         this->handleErrorCode(code);
         baton.post();
     });
@@ -25,11 +25,11 @@ void BaseProcessor<RESP>::doPut(std::vector<kvstore::KV> data) {
 
 
 template<typename RESP>
-ErrorOr<nebula::cpp2::ErrorCode, std::unique_ptr<kvstore::KVIterator>>
+ErrorOr<ErrorCode, std::unique_ptr<kvstore::KVIterator>>
 BaseProcessor<RESP>::doPrefix(const std::string& key) {
     std::unique_ptr<kvstore::KVIterator> iter;
     auto code = kvstore_->prefix(kDefaultSpaceId, kDefaultPartId, key, &iter);
-    if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (code != ErrorCode::SUCCEEDED) {
         VLOG(2) << "Prefix Failed";
         return code;
     }
@@ -38,11 +38,11 @@ BaseProcessor<RESP>::doPrefix(const std::string& key) {
 
 
 template<typename RESP>
-ErrorOr<nebula::cpp2::ErrorCode, std::string>
+ErrorOr<ErrorCode, std::string>
 BaseProcessor<RESP>::doGet(const std::string& key) {
     std::string value;
     auto code = kvstore_->get(kDefaultSpaceId, kDefaultPartId, key, &value);
-    if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (code != ErrorCode::SUCCEEDED) {
         VLOG(2) << "Get Failed";
         return code;
     }
@@ -51,12 +51,12 @@ BaseProcessor<RESP>::doGet(const std::string& key) {
 
 
 template<typename RESP>
-ErrorOr<nebula::cpp2::ErrorCode, std::vector<std::string>>
+ErrorOr<ErrorCode, std::vector<std::string>>
 BaseProcessor<RESP>::doMultiGet(const std::vector<std::string>& keys) {
     std::vector<std::string> values;
     auto ret = kvstore_->multiGet(kDefaultSpaceId, kDefaultPartId, keys, &values);
     auto code = ret.first;
-    if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (code != ErrorCode::SUCCEEDED) {
         VLOG(2) << "MultiGet Failed";
         return code;
     }
@@ -70,7 +70,7 @@ void BaseProcessor<RESP>::doRemove(const std::string& key) {
     kvstore_->asyncRemove(kDefaultSpaceId,
                           kDefaultPartId,
                           key,
-                          [this, &baton] (nebula::cpp2::ErrorCode code) {
+                          [this, &baton] (ErrorCode code) {
         this->handleErrorCode(code);
         baton.post();
     });
@@ -85,7 +85,7 @@ void BaseProcessor<RESP>::doMultiRemove(std::vector<std::string> keys) {
     kvstore_->asyncMultiRemove(kDefaultSpaceId,
                                kDefaultPartId,
                                std::move(keys),
-                               [this, &baton] (nebula::cpp2::ErrorCode code) {
+                               [this, &baton] (ErrorCode code) {
         this->handleErrorCode(code);
         baton.post();
     });
@@ -102,7 +102,7 @@ void BaseProcessor<RESP>::doRemoveRange(const std::string& start,
                                kDefaultPartId,
                                start,
                                end,
-                               [this, &baton] (nebula::cpp2::ErrorCode code) {
+                               [this, &baton] (ErrorCode code) {
         this->handleErrorCode(code);
         baton.post();
     });
@@ -112,11 +112,11 @@ void BaseProcessor<RESP>::doRemoveRange(const std::string& start,
 
 
 template<typename RESP>
-ErrorOr<nebula::cpp2::ErrorCode, std::vector<std::string>>
+ErrorOr<ErrorCode, std::vector<std::string>>
 BaseProcessor<RESP>::doScan(const std::string& start, const std::string& end) {
     std::unique_ptr<kvstore::KVIterator> iter;
     auto code = kvstore_->range(kDefaultSpaceId, kDefaultPartId, start, end, &iter);
-    if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (code != ErrorCode::SUCCEEDED) {
         VLOG(2) << "Scan Failed";
         return code;
     }
@@ -131,12 +131,12 @@ BaseProcessor<RESP>::doScan(const std::string& start, const std::string& end) {
 
 
 template<typename RESP>
-ErrorOr<nebula::cpp2::ErrorCode, std::vector<HostAddr>> BaseProcessor<RESP>::allHosts() {
+ErrorOr<ErrorCode, std::vector<HostAddr>> BaseProcessor<RESP>::allHosts() {
     std::vector<HostAddr> hosts;
     const auto& prefix = MetaServiceUtils::hostPrefix();
     std::unique_ptr<kvstore::KVIterator> iter;
     auto code = kvstore_->prefix(kDefaultSpaceId, kDefaultPartId, prefix, &iter);
-    if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (code != ErrorCode::SUCCEEDED) {
         VLOG(2) << "Can't find any hosts";
         return code;
     }
@@ -153,14 +153,14 @@ ErrorOr<nebula::cpp2::ErrorCode, std::vector<HostAddr>> BaseProcessor<RESP>::all
 
 
 template<typename RESP>
-ErrorOr<nebula::cpp2::ErrorCode, int32_t> BaseProcessor<RESP>::autoIncrementId() {
+ErrorOr<ErrorCode, int32_t> BaseProcessor<RESP>::autoIncrementId() {
     folly::SharedMutex::WriteHolder holder(LockUtils::idLock());
     static const std::string kIdKey = "__id__";
     int32_t id;
     std::string val;
     auto ret = kvstore_->get(kDefaultSpaceId, kDefaultPartId, kIdKey, &val);
-    if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
-        if (ret != nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
+    if (ret != ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND) {
             return ret;
         }
         id = 1;
@@ -175,12 +175,12 @@ ErrorOr<nebula::cpp2::ErrorCode, int32_t> BaseProcessor<RESP>::autoIncrementId()
     kvstore_->asyncMultiPut(kDefaultSpaceId,
                             kDefaultPartId,
                             std::move(data),
-                            [&] (nebula::cpp2::ErrorCode code) {
+                            [&] (ErrorCode code) {
         ret = code;
         baton.post();
     });
     baton.wait();
-    if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (ret != ErrorCode::SUCCEEDED) {
         return ret;
     } else {
         return id;
@@ -189,48 +189,48 @@ ErrorOr<nebula::cpp2::ErrorCode, int32_t> BaseProcessor<RESP>::autoIncrementId()
 
 
 template<typename RESP>
-nebula::cpp2::ErrorCode BaseProcessor<RESP>::spaceExist(GraphSpaceID spaceId) {
+ErrorCode BaseProcessor<RESP>::spaceExist(GraphSpaceID spaceId) {
     folly::SharedMutex::ReadHolder rHolder(LockUtils::spaceLock());
     auto spaceKey = MetaServiceUtils::spaceKey(spaceId);
     auto ret = doGet(std::move(spaceKey));
     if (nebula::ok(ret)) {
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
     auto retCode = nebula::error(ret);
-    if (retCode == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
-        retCode = nebula::cpp2::ErrorCode::E_SPACE_NOT_FOUND;
+    if (retCode == ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND) {
+        retCode = ErrorCode::E_STORAGE_SPACE_NOT_FOUND;
     }
     return retCode;
 }
 
 
 template<typename RESP>
-nebula::cpp2::ErrorCode BaseProcessor<RESP>::userExist(const std::string& account) {
+ErrorCode BaseProcessor<RESP>::userExist(const std::string& account) {
     auto userKey = MetaServiceUtils::userKey(account);
     auto ret = doGet(std::move(userKey));
     if (nebula::ok(ret)) {
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
     auto retCode = nebula::error(ret);
-    if (retCode == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
-        retCode = nebula::cpp2::ErrorCode::E_USER_NOT_FOUND;
+    if (retCode == ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND) {
+        retCode = ErrorCode::E_META_USER_NOT_FOUND E_BACKUP_TABLE_FAILED;
     }
     return retCode;
 }
 
 
 template<typename RESP>
-nebula::cpp2::ErrorCode BaseProcessor<RESP>::hostExist(const std::string& hostKey) {
+ErrorCode BaseProcessor<RESP>::hostExist(const std::string& hostKey) {
     auto ret = doGet(hostKey);
     if (nebula::ok(ret)) {
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
     return nebula::error(ret);
 }
 
 
 template<typename RESP>
-ErrorOr<nebula::cpp2::ErrorCode, GraphSpaceID>
+ErrorOr<ErrorCode, GraphSpaceID>
 BaseProcessor<RESP>::getSpaceId(const std::string& name) {
     auto indexKey = MetaServiceUtils::indexSpaceKey(name);
     auto ret = doGet(indexKey);
@@ -238,15 +238,15 @@ BaseProcessor<RESP>::getSpaceId(const std::string& name) {
         return *reinterpret_cast<const GraphSpaceID*>(nebula::value(ret).c_str());
     }
     auto retCode = nebula::error(ret);
-    if (retCode == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
-        retCode = nebula::cpp2::ErrorCode::E_SPACE_NOT_FOUND;
+    if (retCode == ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND) {
+        retCode = ErrorCode::E_STORAGE_SPACE_NOT_FOUND;
     }
     return retCode;
 }
 
 
 template<typename RESP>
-ErrorOr<nebula::cpp2::ErrorCode, TagID>
+ErrorOr<ErrorCode, TagID>
 BaseProcessor<RESP>::getTagId(GraphSpaceID spaceId, const std::string& name) {
     auto indexKey = MetaServiceUtils::indexTagKey(spaceId, name);
     std::string val;
@@ -255,14 +255,14 @@ BaseProcessor<RESP>::getTagId(GraphSpaceID spaceId, const std::string& name) {
         return *reinterpret_cast<const TagID*>(nebula::value(ret).c_str());
     }
     auto retCode = nebula::error(ret);
-    if (retCode == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
-        retCode = nebula::cpp2::ErrorCode::E_TAG_NOT_FOUND;
+    if (retCode == ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND) {
+        retCode = ErrorCode::E_META_SCHEMA_TAG_NOT_FOUND;
     }
     return retCode;
 }
 
 template<typename RESP>
-ErrorOr<nebula::cpp2::ErrorCode, EdgeType>
+ErrorOr<ErrorCode, EdgeType>
 BaseProcessor<RESP>::getEdgeType(GraphSpaceID spaceId, const std::string& name) {
     auto indexKey = MetaServiceUtils::indexEdgeKey(spaceId, name);
     auto ret = doGet(std::move(indexKey));
@@ -270,15 +270,15 @@ BaseProcessor<RESP>::getEdgeType(GraphSpaceID spaceId, const std::string& name) 
         return *reinterpret_cast<const EdgeType*>(nebula::value(ret).c_str());
     }
     auto retCode = nebula::error(ret);
-    if (retCode == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
-        retCode = nebula::cpp2::ErrorCode::E_EDGE_NOT_FOUND;
+    if (retCode == ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND) {
+        retCode = ErrorCode::E_META_SCHEMA_EDGE_NOT_FOUND;
     }
     return retCode;
 }
 
 
 template <typename RESP>
-ErrorOr<nebula::cpp2::ErrorCode, cpp2::Schema>
+ErrorOr<ErrorCode, cpp2::Schema>
 BaseProcessor<RESP>::getLatestTagSchema(GraphSpaceID spaceId, const TagID tagId) {
     const auto& key = MetaServiceUtils::schemaTagPrefix(spaceId, tagId);
     auto ret = doPrefix(key);
@@ -292,13 +292,13 @@ BaseProcessor<RESP>::getLatestTagSchema(GraphSpaceID spaceId, const TagID tagId)
         return MetaServiceUtils::parseSchema(iter->val());
     } else {
         LOG(ERROR) << "Tag Prefix " << key << " not found";
-        return nebula::cpp2::ErrorCode::E_TAG_NOT_FOUND;
+        return ErrorCode::E_META_SCHEMA_TAG_NOT_FOUND;
     }
 }
 
 
 template <typename RESP>
-ErrorOr<nebula::cpp2::ErrorCode, cpp2::Schema>
+ErrorOr<ErrorCode, cpp2::Schema>
 BaseProcessor<RESP>::getLatestEdgeSchema(GraphSpaceID spaceId, const EdgeType edgeType) {
     const auto& key = MetaServiceUtils::schemaEdgePrefix(spaceId, edgeType);
     auto ret = doPrefix(key);
@@ -312,13 +312,13 @@ BaseProcessor<RESP>::getLatestEdgeSchema(GraphSpaceID spaceId, const EdgeType ed
         return MetaServiceUtils::parseSchema(iter->val());
     } else {
         LOG(ERROR) << "Edge Prefix " << key << " not found";
-        return nebula::cpp2::ErrorCode::E_EDGE_NOT_FOUND;
+        return ErrorCode::E_META_SCHEMA_EDGE_NOT_FOUND;
     }
 }
 
 
 template<typename RESP>
-ErrorOr<nebula::cpp2::ErrorCode, IndexID>
+ErrorOr<ErrorCode, IndexID>
 BaseProcessor<RESP>::getIndexID(GraphSpaceID spaceId, const std::string& indexName) {
     auto indexKey = MetaServiceUtils::indexIndexKey(spaceId, indexName);
     auto ret = doGet(indexKey);
@@ -326,15 +326,15 @@ BaseProcessor<RESP>::getIndexID(GraphSpaceID spaceId, const std::string& indexNa
         return *reinterpret_cast<const IndexID*>(nebula::value(ret).c_str());
     }
     auto retCode = nebula::error(ret);
-    if (retCode == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
-        retCode = nebula::cpp2::ErrorCode::E_INDEX_NOT_FOUND;
+    if (retCode == ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND) {
+        retCode = ErrorCode::E_META_INDEX_NOT_FOUND;
     }
     return retCode;
 }
 
 
 template<typename RESP>
-ErrorOr<nebula::cpp2::ErrorCode, bool>
+ErrorOr<ErrorCode, bool>
 BaseProcessor<RESP>::checkPassword(const std::string& account, const std::string& password) {
     auto userKey = MetaServiceUtils::userKey(account);
     auto ret = doGet(userKey);
@@ -346,14 +346,14 @@ BaseProcessor<RESP>::checkPassword(const std::string& account, const std::string
 
 
 template<typename RESP>
-nebula::cpp2::ErrorCode BaseProcessor<RESP>::doSyncPut(std::vector<kvstore::KV> data) {
+ErrorCode BaseProcessor<RESP>::doSyncPut(std::vector<kvstore::KV> data) {
     folly::Baton<true, std::atomic> baton;
-    auto ret = nebula::cpp2::ErrorCode::SUCCEEDED;
+    auto ret = ErrorCode::SUCCEEDED;
     kvstore_->asyncMultiPut(kDefaultSpaceId,
                             kDefaultPartId,
                             std::move(data),
-                            [&ret, &baton] (nebula::cpp2::ErrorCode code) {
-                                if (nebula::cpp2::ErrorCode::SUCCEEDED != code) {
+                            [&ret, &baton] (ErrorCode code) {
+                                if (ErrorCode::SUCCEEDED != code) {
                                     ret = code;
                                     LOG(INFO) << "Put data error on meta server";
                                 }
@@ -367,19 +367,19 @@ nebula::cpp2::ErrorCode BaseProcessor<RESP>::doSyncPut(std::vector<kvstore::KV> 
 template<typename RESP>
 void BaseProcessor<RESP>::doSyncPutAndUpdate(std::vector<kvstore::KV> data) {
     folly::Baton<true, std::atomic> baton;
-    auto ret = nebula::cpp2::ErrorCode::SUCCEEDED;
+    auto ret = ErrorCode::SUCCEEDED;
     kvstore_->asyncMultiPut(kDefaultSpaceId,
                             kDefaultPartId,
                             std::move(data),
-                            [&ret, &baton] (nebula::cpp2::ErrorCode code) {
-        if (nebula::cpp2::ErrorCode::SUCCEEDED != code) {
+                            [&ret, &baton] (ErrorCode code) {
+        if (ErrorCode::SUCCEEDED != code) {
             ret = code;
             LOG(INFO) << "Put data error on meta server";
         }
         baton.post();
     });
     baton.wait();
-    if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (ret != ErrorCode::SUCCEEDED) {
         this->handleErrorCode(ret);
         this->onFinished();
         return;
@@ -393,19 +393,19 @@ void BaseProcessor<RESP>::doSyncPutAndUpdate(std::vector<kvstore::KV> data) {
 template<typename RESP>
 void BaseProcessor<RESP>::doSyncMultiRemoveAndUpdate(std::vector<std::string> keys) {
     folly::Baton<true, std::atomic> baton;
-    auto ret = nebula::cpp2::ErrorCode::SUCCEEDED;
+    auto ret = ErrorCode::SUCCEEDED;
     kvstore_->asyncMultiRemove(kDefaultSpaceId,
                                kDefaultPartId,
                                std::move(keys),
-                               [&ret, &baton] (nebula::cpp2::ErrorCode code) {
-        if (nebula::cpp2::ErrorCode::SUCCEEDED != code) {
+                               [&ret, &baton] (ErrorCode code) {
+        if (ErrorCode::SUCCEEDED != code) {
             ret = code;
             LOG(INFO) << "Remove data error on meta server";
         }
         baton.post();
     });
     baton.wait();
-    if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (ret != ErrorCode::SUCCEEDED) {
         this->handleErrorCode(ret);
         this->onFinished();
         return;
@@ -417,7 +417,7 @@ void BaseProcessor<RESP>::doSyncMultiRemoveAndUpdate(std::vector<std::string> ke
 
 
 template<typename RESP>
-ErrorOr<nebula::cpp2::ErrorCode, std::vector<cpp2::IndexItem>>
+ErrorOr<ErrorCode, std::vector<cpp2::IndexItem>>
 BaseProcessor<RESP>::getIndexes(GraphSpaceID spaceId, int32_t tagOrEdge) {
     std::vector<cpp2::IndexItem> items;
     const auto& indexPrefix = MetaServiceUtils::indexPrefix(spaceId);
@@ -444,7 +444,7 @@ BaseProcessor<RESP>::getIndexes(GraphSpaceID spaceId, int32_t tagOrEdge) {
     return items;
 }
 template<typename RESP>
-ErrorOr<nebula::cpp2::ErrorCode, cpp2::FTIndex>
+ErrorOr<ErrorCode, cpp2::FTIndex>
 BaseProcessor<RESP>::getFTIndex(GraphSpaceID spaceId, int32_t tagOrEdge) {
     const auto& indexPrefix = MetaServiceUtils::fulltextIndexPrefix();
     auto iterRet = doPrefix(indexPrefix);
@@ -466,11 +466,11 @@ BaseProcessor<RESP>::getFTIndex(GraphSpaceID spaceId, int32_t tagOrEdge) {
         }
         indexIter->next();
     }
-    return nebula::cpp2::ErrorCode::E_INDEX_NOT_FOUND;
+    return ErrorCode::E_META_FULLTEXT_INDEX_NOT_FOUND;
 }
 
 template<typename RESP>
-nebula::cpp2::ErrorCode
+ErrorCode
 BaseProcessor<RESP>::indexCheck(const std::vector<cpp2::IndexItem>& items,
                                 const std::vector<cpp2::AlterSchemaItem>& alterItems) {
     for (const auto& index : items) {
@@ -487,16 +487,16 @@ BaseProcessor<RESP>::indexCheck(const std::vector<cpp2::IndexItem>& items,
                     if (it != indexCols.end()) {
                         LOG(ERROR) << "Index conflict, index :" << index.get_index_name()
                                    << ", column : " << tCol.name;
-                        return nebula::cpp2::ErrorCode::E_CONFLICT;
+                        return ErrorCode::E_META_SCHEMA_CHANGE_FORBIDDEN_WHEN_HAS_INDEX;
                     }
                 }
             }
         }
     }
-    return nebula::cpp2::ErrorCode::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 template<typename RESP>
-nebula::cpp2::ErrorCode
+ErrorCode
 BaseProcessor<RESP>::ftIndexCheck(const std::vector<std::string>& cols,
                                   const std::vector<cpp2::AlterSchemaItem>& alterItems) {
     for (const auto& item : alterItems) {
@@ -510,12 +510,12 @@ BaseProcessor<RESP>::ftIndexCheck(const std::vector<std::string>& cols,
                                        });
                 if (it != cols.end()) {
                     LOG(ERROR) << "fulltext index conflict";
-                    return nebula::cpp2::ErrorCode::E_CONFLICT;
+                    return ErrorCode::E_META_SCHEMA_CHANGE_FORBIDDEN_WHEN_HAS_FULLTEXT_INDEX;
                 }
             }
         }
     }
-    return nebula::cpp2::ErrorCode::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 template<typename RESP>
@@ -541,7 +541,7 @@ bool BaseProcessor<RESP>::checkIndexExist(const std::vector<cpp2::IndexFieldDef>
 
 
 template<typename RESP>
-ErrorOr<nebula::cpp2::ErrorCode, GroupID>
+ErrorOr<ErrorCode, GroupID>
 BaseProcessor<RESP>::getGroupId(const std::string& groupName) {
     auto indexKey = MetaServiceUtils::indexGroupKey(groupName);
     auto ret = doGet(std::move(indexKey));
@@ -549,15 +549,15 @@ BaseProcessor<RESP>::getGroupId(const std::string& groupName) {
         return *reinterpret_cast<const GroupID*>(nebula::value(ret).c_str());
     }
     auto retCode = nebula::error(ret);
-    if (retCode == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
-        retCode = nebula::cpp2::ErrorCode::E_GROUP_NOT_FOUND;
+    if (retCode == ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND) {
+        retCode = ErrorCode::E_GROUP_NOT_FOUND;
     }
     return retCode;
 }
 
 
 template<typename RESP>
-ErrorOr<nebula::cpp2::ErrorCode, ZoneID>
+ErrorOr<ErrorCode, ZoneID>
 BaseProcessor<RESP>::getZoneId(const std::string& zoneName) {
     auto indexKey = MetaServiceUtils::indexZoneKey(zoneName);
     auto ret = doGet(std::move(indexKey));
@@ -565,15 +565,15 @@ BaseProcessor<RESP>::getZoneId(const std::string& zoneName) {
         return *reinterpret_cast<const ZoneID*>(nebula::value(ret).c_str());
     }
     auto retCode = nebula::error(ret);
-    if (retCode == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
-        retCode = nebula::cpp2::ErrorCode::E_ZONE_NOT_FOUND;
+    if (retCode == ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND) {
+        retCode = ErrorCode::E_META_ZONE_NOT_FOUND;
     }
     return retCode;
 }
 
 
 template<typename RESP>
-nebula::cpp2::ErrorCode
+ErrorCode
 BaseProcessor<RESP>::listenerExist(GraphSpaceID space, cpp2::ListenerType type) {
     folly::SharedMutex::ReadHolder rHolder(LockUtils::listenerLock());
     const auto& prefix = MetaServiceUtils::listenerPrefix(space, type);
@@ -584,9 +584,9 @@ BaseProcessor<RESP>::listenerExist(GraphSpaceID space, cpp2::ListenerType type) 
 
     auto iterRet = nebula::value(ret).get();
     if (!iterRet->valid()) {
-        return nebula::cpp2::ErrorCode::E_LISTENER_NOT_FOUND;
+        return ErrorCode::E_META_LISTENER_NOT_COUND;
     }
-    return nebula::cpp2::ErrorCode::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 }  // namespace meta

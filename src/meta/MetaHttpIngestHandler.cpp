@@ -112,7 +112,7 @@ bool MetaHttpIngestHandler::ingestSSTFiles(GraphSpaceID space) {
     static const GraphSpaceID metaSpaceId = 0;
     static const PartitionID  metaPartId = 0;
     auto ret = kvstore_->prefix(metaSpaceId, metaPartId, prefix, &iter);
-    if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (ret != ErrorCode::SUCCEEDED) {
         LOG(ERROR) << "Fetch Parts Failed";
         return false;
     }

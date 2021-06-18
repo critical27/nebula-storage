@@ -134,6 +134,7 @@ private:
     std::atomic<int32_t>* count_;
 };
 
+// doodle
 enum class ResultStatus {
     NORMAL = 0,
     ILLEGAL_DATA = -1,

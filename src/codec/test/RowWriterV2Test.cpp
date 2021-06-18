@@ -50,40 +50,40 @@ TEST(RowWriterV2, NoDefaultValue) {
     ASSERT_EQ(Value::Type::INT, iVal.type());
 
     RowWriterV2 writer1(&schema);
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer1.set(0, true));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer1.set(1, 8));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer1.set(2, 16));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer1.set(3, 32));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer1.setValue(4, iVal));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer1.set(5, pi));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer1.set(6, e));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer1.setValue(7, sVal));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer1.set(8, fixed));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer1.set(9, now));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer1.set(10, date));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer1.set(11, t));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer1.set(12, dt));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer1.setNull(13));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer1.set(0, true));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer1.set(1, 8));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer1.set(2, 16));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer1.set(3, 32));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer1.setValue(4, iVal));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer1.set(5, pi));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer1.set(6, e));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer1.setValue(7, sVal));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer1.set(8, fixed));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer1.set(9, now));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer1.set(10, date));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer1.set(11, t));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer1.set(12, dt));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer1.setNull(13));
     // Purposely skip the col15
-    ASSERT_EQ(WriteResult::SUCCEEDED, writer1.finish());
+    ASSERT_EQ(ErrorCode::SUCCEEDED, writer1.finish());
 
     RowWriterV2 writer2(&schema);
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer2.set("Col01", true));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer2.set("Col02", 8));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer2.set("Col03", 16));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer2.set("Col04", 32));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer2.setValue("Col05", iVal));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer2.set("Col06", pi));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer2.set("Col07", e));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer2.setValue("Col08", sVal));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer2.set("Col09", fixed));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer2.set("Col10", now));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer2.set("Col11", date));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer2.set("Col12", t));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer2.set("Col13", dt));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer2.setNull("Col14"));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer2.set("Col01", true));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer2.set("Col02", 8));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer2.set("Col03", 16));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer2.set("Col04", 32));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer2.setValue("Col05", iVal));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer2.set("Col06", pi));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer2.set("Col07", e));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer2.setValue("Col08", sVal));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer2.set("Col09", fixed));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer2.set("Col10", now));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer2.set("Col11", date));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer2.set("Col12", t));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer2.set("Col13", dt));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer2.setNull("Col14"));
     // Purposely skip the col15
-    ASSERT_EQ(WriteResult::SUCCEEDED, writer2.finish());
+    ASSERT_EQ(ErrorCode::SUCCEEDED, writer2.finish());
 
     std::string encoded1 = std::move(writer1).moveEncodedStr();
     std::string encoded2 = writer2.getEncodedStr();
@@ -204,7 +204,7 @@ TEST(RowWriterV2, WithDefaultValue) {
     schema.appendCol("Col04", PropertyType::FIXED_STRING, 12, false, new ConstantExpression(fixed));
 
     RowWriterV2 writer(&schema);
-    ASSERT_EQ(WriteResult::SUCCEEDED, writer.finish());
+    ASSERT_EQ(ErrorCode::SUCCEEDED, writer.finish());
 
     std::string encoded = std::move(writer).moveEncodedStr();
     auto reader = RowReaderWrapper::getRowReader(&schema, encoded);
@@ -247,19 +247,19 @@ TEST(RowWriterV2, DoubleSet) {
     schema.appendCol("Col05", PropertyType::FIXED_STRING, 12);
 
     RowWriterV2 writer(&schema);
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col01", false));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col01", true));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer.setNull("Col01"));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col02", 1234567));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col02", 7654321));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col03", str));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col03", fixed));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col04", str));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col04", fixed));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer.setNull("Col04"));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col05", fixed));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col05", str));
-    ASSERT_EQ(WriteResult::SUCCEEDED, writer.finish());
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col01", false));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col01", true));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer.setNull("Col01"));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col02", 1234567));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col02", 7654321));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col03", str));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col03", fixed));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col04", str));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col04", fixed));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer.setNull("Col04"));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col05", fixed));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col05", str));
+    ASSERT_EQ(ErrorCode::SUCCEEDED, writer.finish());
 
     std::string encoded = std::move(writer).moveEncodedStr();
     auto reader = RowReaderWrapper::getRowReader(&schema, encoded);
@@ -308,12 +308,12 @@ TEST(RowWriterV2, Update) {
     schema.appendCol("Col05", PropertyType::FIXED_STRING, 12);
 
     RowWriterV2 writer(&schema);
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col01", true));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col02", 1234567));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col03", str));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer.setNull("Col04"));
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col05", fixed));
-    ASSERT_EQ(WriteResult::SUCCEEDED, writer.finish());
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col01", true));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col02", 1234567));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col03", str));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer.setNull("Col04"));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col05", fixed));
+    ASSERT_EQ(ErrorCode::SUCCEEDED, writer.finish());
 
     std::string encoded1 = writer.moveEncodedStr();
 
@@ -321,16 +321,16 @@ TEST(RowWriterV2, Update) {
 
     RowWriterV2 updater2(*oldReader);
     RowWriterV2 updater1(&schema, std::move(encoded1));
-    EXPECT_EQ(WriteResult::SUCCEEDED, updater1.set("Col02", 7654321));
-    EXPECT_EQ(WriteResult::SUCCEEDED, updater2.set("Col02", 7654321));
-    EXPECT_EQ(WriteResult::SUCCEEDED, updater1.set("Col03", fixed));
-    EXPECT_EQ(WriteResult::SUCCEEDED, updater2.set("Col03", fixed));
-    EXPECT_EQ(WriteResult::SUCCEEDED, updater1.set("Col04", str));
-    EXPECT_EQ(WriteResult::SUCCEEDED, updater2.set("Col04", str));
-    EXPECT_EQ(WriteResult::SUCCEEDED, updater1.set("Col05", str));
-    EXPECT_EQ(WriteResult::SUCCEEDED, updater2.set("Col05", str));
-    ASSERT_EQ(WriteResult::SUCCEEDED, updater1.finish());
-    ASSERT_EQ(WriteResult::SUCCEEDED, updater2.finish());
+    EXPECT_EQ(ErrorCode::SUCCEEDED, updater1.set("Col02", 7654321));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, updater2.set("Col02", 7654321));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, updater1.set("Col03", fixed));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, updater2.set("Col03", fixed));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, updater1.set("Col04", str));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, updater2.set("Col04", str));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, updater1.set("Col05", str));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, updater2.set("Col05", str));
+    ASSERT_EQ(ErrorCode::SUCCEEDED, updater1.finish());
+    ASSERT_EQ(ErrorCode::SUCCEEDED, updater2.finish());
 
     std::string encoded2 = updater1.moveEncodedStr();
     std::string encoded3 = updater2.moveEncodedStr();
@@ -381,8 +381,8 @@ TEST(RowWriterV2, Timestamp) {
     schema.appendCol("Col01", PropertyType::TIMESTAMP);
 
     RowWriterV2 writer(&schema);
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col01", 1582183355));
-    ASSERT_EQ(WriteResult::SUCCEEDED, writer.finish());
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col01", 1582183355));
+    ASSERT_EQ(ErrorCode::SUCCEEDED, writer.finish());
 
     std::string encoded1 = writer.moveEncodedStr();
     auto reader1 = RowReaderWrapper::getRowReader(&schema, encoded1);
@@ -394,14 +394,14 @@ TEST(RowWriterV2, Timestamp) {
 
     // Invalid value test
     RowWriterV2 writer2(&schema);
-    EXPECT_NE(WriteResult::SUCCEEDED, writer2.set("Col01", 9223372037));
+    EXPECT_NE(ErrorCode::SUCCEEDED, writer2.set("Col01", 9223372037));
 
-    EXPECT_NE(WriteResult::SUCCEEDED, writer2.set("Col01", -1));
+    EXPECT_NE(ErrorCode::SUCCEEDED, writer2.set("Col01", -1));
 
-    EXPECT_NE(WriteResult::SUCCEEDED, writer2.set("Col01", "2020-02-20 15:22:35"));
+    EXPECT_NE(ErrorCode::SUCCEEDED, writer2.set("Col01", "2020-02-20 15:22:35"));
 
     std::string dateStr = "3220-02-20 15:22:35";  // NOLINT
-    EXPECT_NE(WriteResult::SUCCEEDED, writer2.set(1, dateStr));
+    EXPECT_NE(ErrorCode::SUCCEEDED, writer2.set(1, dateStr));
 }
 
 TEST(RowWriterV2, EmptyString) {
@@ -409,8 +409,8 @@ TEST(RowWriterV2, EmptyString) {
     schema.appendCol("Col01", PropertyType::STRING);
 
     RowWriterV2 writer(&schema);
-    EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col01", ""));
-    ASSERT_EQ(WriteResult::SUCCEEDED, writer.finish());
+    EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col01", ""));
+    ASSERT_EQ(ErrorCode::SUCCEEDED, writer.finish());
 
     std::string encoded = std::move(writer).moveEncodedStr();
     auto reader = RowReaderWrapper::getRowReader(&schema, encoded);
@@ -433,193 +433,193 @@ TEST(RowWriterV2, NumericLimit) {
 
     {
         RowWriterV2 writer(&schema);
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(0, static_cast<int8_t>(std::numeric_limits<int8_t>::min())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(0, static_cast<int16_t>(std::numeric_limits<int8_t>::min())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(0, static_cast<int32_t>(std::numeric_limits<int8_t>::min())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(0, static_cast<int64_t>(std::numeric_limits<int8_t>::min())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(0, static_cast<float>(std::numeric_limits<int8_t>::min())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(0, static_cast<double>(std::numeric_limits<int8_t>::min())));
 
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(0, static_cast<int8_t>(std::numeric_limits<int8_t>::max())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(0, static_cast<int16_t>(std::numeric_limits<int8_t>::max())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(0, static_cast<int32_t>(std::numeric_limits<int8_t>::max())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(0, static_cast<int64_t>(std::numeric_limits<int8_t>::max())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(0, static_cast<float>(std::numeric_limits<int8_t>::max())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(0, static_cast<double>(std::numeric_limits<int8_t>::max())));
 
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(1, static_cast<int16_t>(std::numeric_limits<int16_t>::min())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(1, static_cast<int32_t>(std::numeric_limits<int16_t>::min())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(1, static_cast<int64_t>(std::numeric_limits<int16_t>::min())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(1, static_cast<float>(std::numeric_limits<int16_t>::min())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(1, static_cast<double>(std::numeric_limits<int16_t>::min())));
 
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(1, static_cast<int16_t>(std::numeric_limits<int16_t>::max())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(1, static_cast<int32_t>(std::numeric_limits<int16_t>::max())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(1, static_cast<int64_t>(std::numeric_limits<int16_t>::max())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(1, static_cast<float>(std::numeric_limits<int16_t>::max())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(1, static_cast<double>(std::numeric_limits<int16_t>::max())));
 
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(2, static_cast<int32_t>(std::numeric_limits<int32_t>::min())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(2, static_cast<int64_t>(std::numeric_limits<int32_t>::min())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(2, static_cast<float>(std::numeric_limits<int32_t>::min())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(2, static_cast<double>(std::numeric_limits<int32_t>::min())));
 
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(2, static_cast<int32_t>(std::numeric_limits<int32_t>::max())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(2, static_cast<int64_t>(std::numeric_limits<int32_t>::max())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(2, static_cast<float>(std::numeric_limits<int32_t>::max())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(2, static_cast<double>(std::numeric_limits<int32_t>::max())));
 
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(3, static_cast<int64_t>(std::numeric_limits<int64_t>::min())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(3, static_cast<double>(std::numeric_limits<int64_t>::min())));
 
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(3, static_cast<int64_t>(std::numeric_limits<int64_t>::max())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(3, static_cast<double>(std::numeric_limits<int64_t>::max())));
 
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(4, static_cast<int32_t>(std::numeric_limits<float>::min())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(4, static_cast<int64_t>(std::numeric_limits<float>::min())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(4, static_cast<float>(std::numeric_limits<float>::min())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(4, static_cast<double>(std::numeric_limits<float>::min())));
 
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(4, static_cast<int32_t>(std::numeric_limits<float>::max())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(4, static_cast<int64_t>(std::numeric_limits<float>::max())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(4, static_cast<float>(std::numeric_limits<float>::max())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(4, static_cast<double>(std::numeric_limits<float>::max())));
 
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(5, static_cast<int64_t>(std::numeric_limits<double>::min())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(5, static_cast<double>(std::numeric_limits<double>::min())));
 
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(5, static_cast<int64_t>(std::numeric_limits<double>::max())));
-        EXPECT_EQ(WriteResult::SUCCEEDED,
+        EXPECT_EQ(ErrorCode::SUCCEEDED,
                   writer.set(5, static_cast<double>(std::numeric_limits<double>::max())));
     }
     {
         RowWriterV2 writer(&schema);
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(0, static_cast<int8_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(0, static_cast<int16_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(0, static_cast<int32_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(0, static_cast<int64_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(0, static_cast<float>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(0, static_cast<double>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(0, static_cast<int8_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(0, static_cast<int16_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(0, static_cast<int32_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(0, static_cast<int64_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(0, static_cast<float>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(0, static_cast<double>(0)));
 
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(1, static_cast<int8_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(1, static_cast<int16_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(1, static_cast<int32_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(1, static_cast<int64_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(1, static_cast<float>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(1, static_cast<double>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(1, static_cast<int8_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(1, static_cast<int16_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(1, static_cast<int32_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(1, static_cast<int64_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(1, static_cast<float>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(1, static_cast<double>(0)));
 
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(2, static_cast<int8_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(2, static_cast<int16_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(2, static_cast<int32_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(2, static_cast<int64_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(2, static_cast<float>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(2, static_cast<double>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(2, static_cast<int8_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(2, static_cast<int16_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(2, static_cast<int32_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(2, static_cast<int64_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(2, static_cast<float>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(2, static_cast<double>(0)));
 
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(3, static_cast<int8_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(3, static_cast<int16_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(3, static_cast<int32_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(3, static_cast<int64_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(3, static_cast<float>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(3, static_cast<double>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(3, static_cast<int8_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(3, static_cast<int16_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(3, static_cast<int32_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(3, static_cast<int64_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(3, static_cast<float>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(3, static_cast<double>(0)));
 
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(4, static_cast<int8_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(4, static_cast<int16_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(4, static_cast<int32_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(4, static_cast<int64_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(4, static_cast<float>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(4, static_cast<double>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(4, static_cast<int8_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(4, static_cast<int16_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(4, static_cast<int32_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(4, static_cast<int64_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(4, static_cast<float>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(4, static_cast<double>(0)));
 
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(5, static_cast<int8_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(5, static_cast<int16_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(5, static_cast<int32_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(5, static_cast<int64_t>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(5, static_cast<float>(0)));
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set(5, static_cast<double>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(5, static_cast<int8_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(5, static_cast<int16_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(5, static_cast<int32_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(5, static_cast<int64_t>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(5, static_cast<float>(0)));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set(5, static_cast<double>(0)));
     }
     {
         RowWriterV2 writer(&schema);
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(0, static_cast<int16_t>(-0x81)));
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(0, static_cast<int16_t>(0x80)));
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(0, static_cast<int32_t>(-0x81)));
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(0, static_cast<int32_t>(0x80)));
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(0, static_cast<int64_t>(-0x81)));
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(0, static_cast<int64_t>(0x80)));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(0, static_cast<int16_t>(-0x81)));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(0, static_cast<int16_t>(0x80)));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(0, static_cast<int32_t>(-0x81)));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(0, static_cast<int32_t>(0x80)));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(0, static_cast<int64_t>(-0x81)));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(0, static_cast<int64_t>(0x80)));
 
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(0, std::numeric_limits<float>::lowest()));
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(0, std::numeric_limits<float>::max()));
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(0, std::numeric_limits<double>::lowest()));
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(0, std::numeric_limits<double>::max()));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(0, std::numeric_limits<float>::lowest()));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(0, std::numeric_limits<float>::max()));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(0, std::numeric_limits<double>::lowest()));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(0, std::numeric_limits<double>::max()));
 
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(1, static_cast<int32_t>(-0x8001)));
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(1, static_cast<int32_t>(0x8000)));
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(1, static_cast<int64_t>(-0x8001)));
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(1, static_cast<int64_t>(0x8000)));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(1, static_cast<int32_t>(-0x8001)));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(1, static_cast<int32_t>(0x8000)));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(1, static_cast<int64_t>(-0x8001)));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(1, static_cast<int64_t>(0x8000)));
 
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(1, std::numeric_limits<float>::lowest()));
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(1, std::numeric_limits<float>::max()));
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(1, std::numeric_limits<double>::lowest()));
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(1, std::numeric_limits<double>::max()));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(1, std::numeric_limits<float>::lowest()));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(1, std::numeric_limits<float>::max()));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(1, std::numeric_limits<double>::lowest()));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(1, std::numeric_limits<double>::max()));
 
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(2, static_cast<int64_t>(-0x80000001L)));
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(2, static_cast<int64_t>(0x80000000L)));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(2, static_cast<int64_t>(-0x80000001L)));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(2, static_cast<int64_t>(0x80000000L)));
 
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(2, std::numeric_limits<float>::lowest()));
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(2, std::numeric_limits<float>::max()));
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(2, std::numeric_limits<double>::lowest()));
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(2, std::numeric_limits<double>::max()));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(2, std::numeric_limits<float>::lowest()));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(2, std::numeric_limits<float>::max()));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(2, std::numeric_limits<double>::lowest()));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(2, std::numeric_limits<double>::max()));
 
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(3, std::numeric_limits<float>::lowest()));
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(3, std::numeric_limits<float>::max()));
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(3, std::numeric_limits<double>::lowest()));
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(3, std::numeric_limits<double>::max()));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(3, std::numeric_limits<float>::lowest()));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(3, std::numeric_limits<float>::max()));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(3, std::numeric_limits<double>::lowest()));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(3, std::numeric_limits<double>::max()));
 
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(4, std::numeric_limits<double>::lowest()));
-        EXPECT_EQ(WriteResult::OUT_OF_RANGE, writer.set(4, std::numeric_limits<double>::max()));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(4, std::numeric_limits<double>::lowest()));
+        EXPECT_EQ(ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE, writer.set(4, std::numeric_limits<double>::max()));
     }
 }
 
@@ -629,9 +629,9 @@ TEST(RowWriterV2, TimestampTest) {
         schema.appendCol("Col01", PropertyType::STRING);
 
         RowWriterV2 writer(&schema);
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col01", ""));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col01", ""));
         auto ts = time::WallClock::fastNowInMicroSec();
-        ASSERT_EQ(WriteResult::SUCCEEDED, writer.finish());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, writer.finish());
 
         std::string encoded = std::move(writer).moveEncodedStr();
         auto reader = RowReaderWrapper::getRowReader(&schema, encoded);
@@ -648,11 +648,11 @@ TEST(RowWriterV2, TimestampTest) {
         schema.appendCol("Col01", PropertyType::STRING);
 
         RowWriterV2 writer(&schema);
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col01", ""));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col01", ""));
         // rewrite, for processOutOfSpace test
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col01", "new"));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col01", "new"));
         auto ts = time::WallClock::fastNowInMicroSec();
-        ASSERT_EQ(WriteResult::SUCCEEDED, writer.finish());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, writer.finish());
 
         std::string encoded = std::move(writer).moveEncodedStr();
         auto reader = RowReaderWrapper::getRowReader(&schema, encoded);
@@ -669,15 +669,15 @@ TEST(RowWriterV2, TimestampTest) {
         schema.appendCol("Col01", PropertyType::STRING);
 
         RowWriterV2 writer(&schema);
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col01", ""));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col01", ""));
         // rewrite, for processOutOfSpace test
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col01", "abc"));
-        ASSERT_EQ(WriteResult::SUCCEEDED, writer.finish());
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col01", "abc"));
+        ASSERT_EQ(ErrorCode::SUCCEEDED, writer.finish());
         std::string encoded = std::move(writer).moveEncodedStr();
 
         RowWriterV2 writer2(&schema, encoded);
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer2.set("Col01", "abc"));
-        ASSERT_EQ(WriteResult::SUCCEEDED, writer2.finish());
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer2.set("Col01", "abc"));
+        ASSERT_EQ(ErrorCode::SUCCEEDED, writer2.finish());
         std::string encoded2 = std::move(writer2).moveEncodedStr();
         EXPECT_EQ(encoded.substr(0, encoded.size() - sizeof(int64_t)),
                   encoded2.substr(0, encoded2.size() - sizeof(int64_t)));
@@ -687,15 +687,15 @@ TEST(RowWriterV2, TimestampTest) {
         schema.appendCol("Col01", PropertyType::INT64);
 
         RowWriterV2 writer(&schema);
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col01", 1));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col01", 1));
         // rewrite, for processOutOfSpace test
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col01", 2));
-        ASSERT_EQ(WriteResult::SUCCEEDED, writer.finish());
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col01", 2));
+        ASSERT_EQ(ErrorCode::SUCCEEDED, writer.finish());
         std::string encoded = std::move(writer).moveEncodedStr();
 
         RowWriterV2 writer2(&schema, encoded);
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer2.set("Col01", 2));
-        ASSERT_EQ(WriteResult::SUCCEEDED, writer2.finish());
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer2.set("Col01", 2));
+        ASSERT_EQ(ErrorCode::SUCCEEDED, writer2.finish());
         std::string encoded2 = std::move(writer2).moveEncodedStr();
         EXPECT_EQ(encoded.substr(0, encoded.size() - sizeof(int64_t)),
                   encoded2.substr(0, encoded2.size() - sizeof(int64_t)));
@@ -707,11 +707,11 @@ TEST(RowWriterV2, TimestampTest) {
         schema.appendCol("Col02", PropertyType::INT64);
 
         RowWriterV2 writer(&schema);
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col01", 1));
-        ASSERT_EQ(WriteResult::FIELD_UNSET, writer.finish());
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer.set("Col02", 2));
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col01", 1));
+        ASSERT_EQ(ErrorCode::E_STORAGE_CODEC_FIELD_UNSET, writer.finish());
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer.set("Col02", 2));
         auto ts = time::WallClock::fastNowInMicroSec();
-        ASSERT_EQ(WriteResult::SUCCEEDED, writer.finish());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, writer.finish());
         std::string encoded = std::move(writer).moveEncodedStr();
         auto reader = RowReaderWrapper::getRowReader(&schema, encoded);
         Value v1 = reader->getValueByName("Col01");
@@ -726,8 +726,8 @@ TEST(RowWriterV2, TimestampTest) {
                    (reader->getTimestamp() <= time::WallClock::fastNowInMicroSec());
         EXPECT_TRUE(ret);
         RowWriterV2 writer2(&schema, encoded);
-        EXPECT_EQ(WriteResult::SUCCEEDED, writer2.set("Col02", 2));
-        ASSERT_EQ(WriteResult::SUCCEEDED, writer2.finish());
+        EXPECT_EQ(ErrorCode::SUCCEEDED, writer2.set("Col02", 2));
+        ASSERT_EQ(ErrorCode::SUCCEEDED, writer2.finish());
         std::string encoded2 = std::move(writer2).moveEncodedStr();
         EXPECT_EQ(encoded.substr(0, encoded.size() - sizeof(int64_t)),
                   encoded2.substr(0, encoded2.size() - sizeof(int64_t)));

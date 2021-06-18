@@ -31,10 +31,10 @@ public:
         , result_(result) {
         }
 
-    nebula::cpp2::ErrorCode execute(PartitionID partId, const T& vId) override {
+    ErrorCode execute(PartitionID partId, const T& vId) override {
         auto ret = RelNode<T>::execute(partId, vId);
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED &&
-            ret != nebula::cpp2::ErrorCode::E_FILTER_OUT) {
+        if (ret != ErrorCode::SUCCEEDED &&
+            ret != ErrorCode::E_STORAGE_QUERY_FILTER_NOT_PASSED) {
             return ret;
         }
 

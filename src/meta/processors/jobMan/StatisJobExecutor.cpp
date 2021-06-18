@@ -18,13 +18,13 @@ bool StatisJobExecutor::check() {
     return paras_.size() == 1;
 }
 
-nebula::cpp2::ErrorCode
+ErrorCode
 StatisJobExecutor::save(const std::string& key, const std::string& val) {
     std::vector<kvstore::KV> data{std::make_pair(key, val)};
     folly::Baton<true, std::atomic> baton;
-    auto rc = nebula::cpp2::ErrorCode::SUCCEEDED;
+    auto rc = ErrorCode::SUCCEEDED;
     kvstore_->asyncMultiPut(kDefaultSpaceId, kDefaultPartId, std::move(data),
-                            [&] (nebula::cpp2::ErrorCode code) {
+                            [&] (ErrorCode code) {
                                 rc = code;
                                 baton.post();
                             });
@@ -32,11 +32,11 @@ StatisJobExecutor::save(const std::string& key, const std::string& val) {
     return rc;
 }
 
-nebula::cpp2::ErrorCode StatisJobExecutor::doRemove(const std::string& key) {
+ErrorCode StatisJobExecutor::doRemove(const std::string& key) {
     folly::Baton<true, std::atomic> baton;
-    auto rc = nebula::cpp2::ErrorCode::SUCCEEDED;
+    auto rc = ErrorCode::SUCCEEDED;
     kvstore_->asyncRemove(kDefaultSpaceId, kDefaultPartId, key,
-                          [&](nebula::cpp2::ErrorCode code) {
+                          [&](ErrorCode code) {
                               rc = code;
                               baton.post();
                           });
@@ -44,7 +44,7 @@ nebula::cpp2::ErrorCode StatisJobExecutor::doRemove(const std::string& key) {
     return rc;
 }
 
-nebula::cpp2::ErrorCode StatisJobExecutor::prepare() {
+ErrorCode StatisJobExecutor::prepare() {
     auto spaceRet = getSpaceIdFromName(paras_[0]);
     if (!nebula::ok(spaceRet)) {
         LOG(ERROR) << "Can't find the space: " << paras_[0];
@@ -106,10 +106,10 @@ void StatisJobExecutor::addStatis(cpp2::StatisItem& lhs, const cpp2::StatisItem&
 /**
  * @brief caller will guarantee there won't be any conflict read / write.
  */
-nebula::cpp2::ErrorCode
+ErrorCode
 StatisJobExecutor::saveSpecialTaskStatus(const cpp2::ReportTaskReq& req) {
     if (!req.statis_ref().has_value()) {
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
     cpp2::StatisItem statisItem;
     auto statisKey = MetaServiceUtils::statisKey(space_);
@@ -117,14 +117,14 @@ StatisJobExecutor::saveSpecialTaskStatus(const cpp2::ReportTaskReq& req) {
     std::string val;
     auto ret = kvstore_->get(kDefaultSpaceId, kDefaultPartId, tempKey, &val);
 
-    if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
-        if (ret != nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
+    if (ret != ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND) {
             return ret;
         }
         ret = kvstore_->get(kDefaultSpaceId, kDefaultPartId, statisKey, &val);
     }
 
-    if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (ret != ErrorCode::SUCCEEDED) {
         return ret;
     }
 
@@ -147,12 +147,12 @@ std::string StatisJobExecutor::toTempKey(int32_t jobId) {
     return key.append(reinterpret_cast<const char*>(&jobId), sizeof(int32_t));
 }
 
-nebula::cpp2::ErrorCode StatisJobExecutor::finish(bool exeSuccessed) {
+ErrorCode StatisJobExecutor::finish(bool exeSuccessed) {
     auto statisKey = MetaServiceUtils::statisKey(space_);
     auto tempKey = toTempKey(jobId_);
     std::string val;
     auto ret = kvstore_->get(kDefaultSpaceId, kDefaultPartId, tempKey, &val);
-    if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (ret != ErrorCode::SUCCEEDED) {
         LOG(ERROR) << "Can't find the statis data, spaceId : " << space_;
         return ret;
     }
@@ -164,7 +164,7 @@ nebula::cpp2::ErrorCode StatisJobExecutor::finish(bool exeSuccessed) {
     }
     auto statisVal = MetaServiceUtils::statisVal(statisItem);
     auto retCode = save(statisKey, statisVal);
-    if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (retCode != ErrorCode::SUCCEEDED) {
         LOG(ERROR) << "Sace statis data failed, error "
                    << apache::thrift::util::enumNameSafe(retCode);;
         return retCode;
@@ -172,15 +172,11 @@ nebula::cpp2::ErrorCode StatisJobExecutor::finish(bool exeSuccessed) {
     return doRemove(tempKey);
 }
 
-nebula::cpp2::ErrorCode StatisJobExecutor::stop() {
+ErrorCode StatisJobExecutor::stop() {
     auto errOrTargetHost = getTargetHost(space_);
     if (!nebula::ok(errOrTargetHost)) {
         LOG(ERROR) << "Get target host failed";
-        auto retCode = nebula::error(errOrTargetHost);
-        if (retCode != nebula::cpp2::ErrorCode::E_LEADER_CHANGED) {
-            retCode = nebula::cpp2::ErrorCode::E_NO_HOSTS;
-        }
-        return retCode;
+        return nebula::error(errOrTargetHost);
     }
 
     auto& hosts = nebula::value(errOrTargetHost);
@@ -196,16 +192,16 @@ nebula::cpp2::ErrorCode StatisJobExecutor::stop() {
                 return t.hasException();
                 })) {
         LOG(ERROR) << "statis job stop() RPC failure.";
-        return nebula::cpp2::ErrorCode::E_BALANCER_FAILURE;
+        return ErrorCode::E_META_JOB_STOP_FAILED;
     }
 
     for (const auto& t : tries) {
         if (!t.value().ok()) {
             LOG(ERROR) << "Stop statis job Failed";
-            return nebula::cpp2::ErrorCode::E_BALANCER_FAILURE;
+            return ErrorCode::E_META_JOB_STOP_FAILED;
         }
     }
-    return nebula::cpp2::ErrorCode::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 }  // namespace meta

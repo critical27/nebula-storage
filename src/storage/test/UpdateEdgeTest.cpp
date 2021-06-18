@@ -30,13 +30,13 @@ static bool encode(const meta::NebulaSchemaProvider* schema,
     RowWriterV2 writer(schema);
     for (size_t i = 0; i < props.size(); i++) {
         auto r = writer.setValue(i, props[i]);
-        if (r != WriteResult::SUCCEEDED) {
+        if (r != ErrorCode::SUCCEEDED) {
             LOG(ERROR) << "Invalid prop " << i;
             return false;
         }
     }
     auto ret = writer.finish();
-    if (ret != WriteResult::SUCCEEDED) {
+    if (ret != ErrorCode::SUCCEEDED) {
         LOG(ERROR) << "Failed to write data";
         return false;
     }
@@ -81,8 +81,8 @@ static bool mockEdgeData(storage::StorageEnv* env, int32_t totalParts, int32_t s
             }
         }
         env->kvstore_->asyncMultiPut(spaceId, part.first, std::move(data),
-                                     [&](nebula::cpp2::ErrorCode code) {
-                                         ASSERT_EQ(code, nebula::cpp2::ErrorCode::SUCCEEDED);
+                                     [&](ErrorCode code) {
+                                         ASSERT_EQ(code, ErrorCode::SUCCEEDED);
                                          count.fetch_sub(1);
                                          if (count.load() == 0) {
                                              baton.post();
@@ -217,7 +217,7 @@ TEST(UpdateEdgeTest, No_Filter_Test) {
         auto prefix = NebulaKeyUtils::edgePrefix(spaceVidLen, partId, srcId, edgeType, rank, dstId);
         std::unique_ptr<kvstore::KVIterator> iter;
         auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-        EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+        EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
         EXPECT_TRUE(iter && iter->valid());
 
         auto edgeReader = RowReaderWrapper::getEdgePropReader(env->schemaMan_,
@@ -327,7 +327,7 @@ TEST(UpdateEdgeTest, No_Filter_Test) {
         auto prefix = NebulaKeyUtils::edgePrefix(spaceVidLen, partId, srcId, edgeType, rank, dstId);
         std::unique_ptr<kvstore::KVIterator> iter;
         auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-        EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+        EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
         EXPECT_TRUE(iter && iter->valid());
 
         auto edgeReader = RowReaderWrapper::getEdgePropReader(env->schemaMan_,
@@ -475,7 +475,7 @@ TEST(UpdateEdgeTest, Filter_Yield_Test) {
     auto prefix = NebulaKeyUtils::edgePrefix(spaceVidLen, partId, srcId, edgeType, rank, dstId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto reader = RowReaderWrapper::getEdgePropReader(env->schemaMan_,
@@ -613,7 +613,7 @@ TEST(UpdateEdgeTest, Insertable_Test) {
     auto prefix = NebulaKeyUtils::edgePrefix(spaceVidLen, partId, srcId, edgeType, rank, dstId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto reader = RowReaderWrapper::getEdgePropReader(env->schemaMan_,
@@ -711,7 +711,7 @@ TEST(UpdateEdgeTest, Invalid_Update_Prop_Test) {
     auto prefix = NebulaKeyUtils::edgePrefix(spaceVidLen, partId, srcId, edgeType, rank, dstId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto reader = RowReaderWrapper::getEdgePropReader(env->schemaMan_,
@@ -830,7 +830,7 @@ TEST(UpdateEdgeTest, Invalid_Filter_Test) {
     auto prefix = NebulaKeyUtils::edgePrefix(spaceVidLen, partId, srcId, edgeType, rank, dstId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto reader = RowReaderWrapper::getEdgePropReader(env->schemaMan_,
@@ -990,7 +990,7 @@ TEST(UpdateEdgeTest, Insertable_Filter_value_Test) {
     auto prefix = NebulaKeyUtils::edgePrefix(spaceVidLen, partId, srcId, edgeType, rank, dstId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto reader = RowReaderWrapper::getEdgePropReader(env->schemaMan_,
@@ -1038,8 +1038,8 @@ TEST(UpdateEdgeTest, CorruptDataTest) {
     data.emplace_back(std::make_pair(key, ""));
     folly::Baton<> baton;
     env->kvstore_->asyncMultiPut(spaceId, partId, std::move(data),
-        [&](nebula::cpp2::ErrorCode code) {
-            ASSERT_EQ(code, nebula::cpp2::ErrorCode::SUCCEEDED);
+        [&](ErrorCode code) {
+            ASSERT_EQ(code, ErrorCode::SUCCEEDED);
             baton.post();
         });
     baton.wait();
@@ -1290,7 +1290,7 @@ TEST(UpdateEdgeTest, TTL_Insert_No_Exist_Test) {
     auto prefix = NebulaKeyUtils::edgePrefix(spaceVidLen, partId, srcId, edgeType, rank, dstId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto reader = RowReaderWrapper::getEdgePropReader(env->schemaMan_,
@@ -1426,7 +1426,7 @@ TEST(UpdateEdgeTest, TTL_Insert_Test) {
     auto prefix = NebulaKeyUtils::edgePrefix(spaceVidLen, partId, srcId, edgeType, rank, dstId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto schema = env->schemaMan_->getEdgeSchema(spaceId, std::abs(edgeType));
@@ -1575,7 +1575,7 @@ TEST(UpdateEdgeTest, Yield_Key_Test) {
     auto prefix = NebulaKeyUtils::edgePrefix(spaceVidLen, partId, srcId, edgeType, rank, dstId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto edgeReader = RowReaderWrapper::getEdgePropReader(env->schemaMan_,
@@ -1684,7 +1684,7 @@ TEST(UpdateEdgeTest, Yield_Illegal_Key_Test) {
     auto prefix = NebulaKeyUtils::edgePrefix(spaceVidLen, partId, srcId, edgeType, rank, dstId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto edgeReader = RowReaderWrapper::getEdgePropReader(env->schemaMan_,
@@ -1902,7 +1902,7 @@ TEST(UpdateEdgeTest, Insertable_In_Set_Test) {
     auto prefix = NebulaKeyUtils::edgePrefix(spaceVidLen, partId, srcId, edgeType, rank, dstId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto reader = RowReaderWrapper::getEdgePropReader(env->schemaMan_,
@@ -1990,7 +1990,7 @@ TEST(UpdateEdgeTest, Update_Multi_edge_Test) {
     auto prefix = NebulaKeyUtils::edgePrefix(spaceVidLen, partId, srcId, edgeType, rank, dstId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto reader = RowReaderWrapper::getEdgePropReader(env->schemaMan_,
@@ -2079,7 +2079,7 @@ TEST(UpdateEdgeTest, Upsert_Multi_edge_Test) {
     auto prefix = NebulaKeyUtils::edgePrefix(spaceVidLen, partId, srcId, edgeType, rank, dstId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto reader = RowReaderWrapper::getEdgePropReader(env->schemaMan_,
@@ -2168,7 +2168,7 @@ TEST(UpdateEdgeTest, Upsert_Field_Type_And_Value_Match_Test) {
     auto prefix = NebulaKeyUtils::edgePrefix(spaceVidLen, partId, srcId, edgeType, rank, dstId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto reader = RowReaderWrapper::getEdgePropReader(env->schemaMan_,

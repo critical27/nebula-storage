@@ -106,7 +106,7 @@ public:
     }
 
     // Return the current leader
-    ErrorOr<nebula::cpp2::ErrorCode, HostAddr>
+    ErrorOr<ErrorCode, HostAddr>
     partLeader(GraphSpaceID spaceId, PartitionID partId) override;
 
     PartManager* partManager() const override {
@@ -121,14 +121,14 @@ public:
         return options_.dataPaths_;
     }
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     get(GraphSpaceID spaceId,
         PartitionID partId,
         const std::string& key,
         std::string* value,
         bool canReadFromFollower = false) override;
 
-    std::pair<nebula::cpp2::ErrorCode, std::vector<Status>>
+    std::pair<ErrorCode, std::vector<Status>>
     multiGet(GraphSpaceID spaceId,
              PartitionID partId,
              const std::vector<std::string>& keys,
@@ -136,7 +136,7 @@ public:
              bool canReadFromFollower = false) override;
 
     // Get all results in range [start, end)
-    nebula::cpp2::ErrorCode
+    ErrorCode
     range(GraphSpaceID spaceId,
           PartitionID partId,
           const std::string& start,
@@ -145,7 +145,7 @@ public:
           bool canReadFromFollower = false) override;
 
     // Delete the overloading with a rvalue `start' and `end'
-    nebula::cpp2::ErrorCode
+    ErrorCode
     range(GraphSpaceID spaceId,
           PartitionID partId,
           std::string&& start,
@@ -154,7 +154,7 @@ public:
           bool canReadFromFollower = false) override = delete;
 
     // Get all results with prefix.
-    nebula::cpp2::ErrorCode
+    ErrorCode
     prefix(GraphSpaceID spaceId,
            PartitionID partId,
            const std::string& prefix,
@@ -162,7 +162,7 @@ public:
            bool canReadFromFollower = false) override;
 
     // Delete the overloading with a rvalue `prefix'
-    nebula::cpp2::ErrorCode
+    ErrorCode
     prefix(GraphSpaceID spaceId,
            PartitionID partId,
            std::string&& prefix,
@@ -170,7 +170,7 @@ public:
            bool canReadFromFollower = false) override = delete;
 
     // Get all results with prefix starting from start
-    nebula::cpp2::ErrorCode
+    ErrorCode
     rangeWithPrefix(GraphSpaceID spaceId,
                     PartitionID partId,
                     const std::string& start,
@@ -179,7 +179,7 @@ public:
                     bool canReadFromFollower = false) override;
 
     // Delete the overloading with a rvalue `prefix'
-    nebula::cpp2::ErrorCode
+    ErrorCode
     rangeWithPrefix(GraphSpaceID spaceId,
                     PartitionID partId,
                     std::string&& start,
@@ -187,7 +187,7 @@ public:
                     std::unique_ptr<KVIterator>* iter,
                     bool canReadFromFollower = false) override = delete;
 
-    nebula::cpp2::ErrorCode sync(GraphSpaceID spaceId, PartitionID partId) override;
+    ErrorCode sync(GraphSpaceID spaceId, PartitionID partId) override;
 
     // async batch put.
     void asyncMultiPut(GraphSpaceID spaceId,
@@ -221,37 +221,37 @@ public:
                        raftex::AtomicOp op,
                        KVCallback cb) override;
 
-    ErrorOr<nebula::cpp2::ErrorCode, std::shared_ptr<Part>>
+    ErrorOr<ErrorCode, std::shared_ptr<Part>>
     part(GraphSpaceID spaceId, PartitionID partId) override;
 
-    nebula::cpp2::ErrorCode ingest(GraphSpaceID spaceId) override;
+    ErrorCode ingest(GraphSpaceID spaceId) override;
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     setOption(GraphSpaceID spaceId,
               const std::string& configKey,
               const std::string& configValue);
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     setDBOption(GraphSpaceID spaceId,
                 const std::string& configKey,
                 const std::string& configValue);
 
-    nebula::cpp2::ErrorCode compact(GraphSpaceID spaceId) override;
+    ErrorCode compact(GraphSpaceID spaceId) override;
 
-    nebula::cpp2::ErrorCode flush(GraphSpaceID spaceId) override;
+    ErrorCode flush(GraphSpaceID spaceId) override;
 
-    ErrorOr<nebula::cpp2::ErrorCode, std::vector<cpp2::CheckpointInfo>> createCheckpoint(
+    ErrorOr<ErrorCode, std::vector<cpp2::CheckpointInfo>> createCheckpoint(
         GraphSpaceID spaceId,
         const std::string& name) override;
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     dropCheckpoint(GraphSpaceID spaceId, const std::string& name) override;
 
-    nebula::cpp2::ErrorCode setWriteBlocking(GraphSpaceID spaceId, bool sign) override;
+    ErrorCode setWriteBlocking(GraphSpaceID spaceId, bool sign) override;
 
     bool isLeader(GraphSpaceID spaceId, PartitionID partId);
 
-    ErrorOr<nebula::cpp2::ErrorCode, std::shared_ptr<SpacePartInfo>>
+    ErrorOr<ErrorCode, std::shared_ptr<SpacePartInfo>>
     space(GraphSpaceID spaceId);
 
     /**
@@ -271,13 +271,13 @@ public:
     int32_t allLeader(std::unordered_map<GraphSpaceID, std::vector<meta::cpp2::LeaderInfo>>&
                           leaderIds) override;
 
-    ErrorOr<nebula::cpp2::ErrorCode, std::vector<std::string>>
+    ErrorOr<ErrorCode, std::vector<std::string>>
     backupTable(GraphSpaceID spaceId,
                 const std::string& name,
                 const std::string& tablePrefix,
                 std::function<bool(const folly::StringPiece& key)> filter) override;
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     restoreFromFiles(GraphSpaceID spaceId,
                      const std::vector<std::string>& files) override;
 
@@ -294,7 +294,7 @@ public:
                               PartitionID partId,
                               const std::vector<HostAddr>& remoteListeners) override;
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     multiPutWithoutReplicator(GraphSpaceID spaceId, std::vector<KV> keyValues) override;
 
 private:
@@ -323,7 +323,7 @@ private:
                                           meta::cpp2::ListenerType type,
                                           const std::vector<HostAddr>& peers);
 
-    ErrorOr<nebula::cpp2::ErrorCode, KVEngine*>
+    ErrorOr<ErrorCode, KVEngine*>
     engine(GraphSpaceID spaceId, PartitionID partId);
 
     bool checkLeader(std::shared_ptr<Part> part, bool canReadFromFollower = false) const;

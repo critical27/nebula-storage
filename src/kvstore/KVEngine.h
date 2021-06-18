@@ -20,13 +20,13 @@ class WriteBatch {
 public:
     virtual ~WriteBatch() = default;
 
-    virtual nebula::cpp2::ErrorCode
+    virtual ErrorCode
     put(folly::StringPiece key, folly::StringPiece value) = 0;
 
-    virtual nebula::cpp2::ErrorCode remove(folly::StringPiece key) = 0;
+    virtual ErrorCode remove(folly::StringPiece key) = 0;
 
     // Remove all keys in the range [start, end)
-    virtual nebula::cpp2::ErrorCode
+    virtual ErrorCode
     removeRange(folly::StringPiece start, folly::StringPiece end) = 0;
 };
 
@@ -47,13 +47,13 @@ public:
 
     virtual std::unique_ptr<WriteBatch> startBatchWrite() = 0;
 
-    virtual nebula::cpp2::ErrorCode
+    virtual ErrorCode
     commitBatchWrite(std::unique_ptr<WriteBatch> batch,
                      bool disableWAL = true,
                      bool sync = false) = 0;
 
     // Read a single key
-    virtual nebula::cpp2::ErrorCode get(const std::string& key, std::string* value) = 0;
+    virtual ErrorCode get(const std::string& key, std::string* value) = 0;
 
     // Read a list of keys, if key[i] does not exist, the i-th value in return value
     // would be Status::KeyNotFound
@@ -61,35 +61,35 @@ public:
                                          std::vector<std::string>* values) = 0;
 
     // Get all results in range [start, end)
-    virtual nebula::cpp2::ErrorCode
+    virtual ErrorCode
     range(const std::string& start,
           const std::string& end,
           std::unique_ptr<KVIterator>* iter) = 0;
 
     // Get all results with 'prefix' str as prefix.
-    virtual nebula::cpp2::ErrorCode
+    virtual ErrorCode
     prefix(const std::string& prefix, std::unique_ptr<KVIterator>* iter) = 0;
 
     // Get all results with 'prefix' str as prefix starting form 'start'
-    virtual nebula::cpp2::ErrorCode
+    virtual ErrorCode
     rangeWithPrefix(const std::string& start,
                     const std::string& prefix,
                     std::unique_ptr<KVIterator>* iter) = 0;
 
     // Write a single record
-    virtual nebula::cpp2::ErrorCode put(std::string key, std::string value) = 0;
+    virtual ErrorCode put(std::string key, std::string value) = 0;
 
     // Write a batch of records
-    virtual nebula::cpp2::ErrorCode multiPut(std::vector<KV> keyValues) = 0;
+    virtual ErrorCode multiPut(std::vector<KV> keyValues) = 0;
 
     // Remove a single key
-    virtual nebula::cpp2::ErrorCode remove(const std::string& key) = 0;
+    virtual ErrorCode remove(const std::string& key) = 0;
 
     // Remove a batch of keys
-    virtual nebula::cpp2::ErrorCode multiRemove(std::vector<std::string> keys) = 0;
+    virtual ErrorCode multiRemove(std::vector<std::string> keys) = 0;
 
     // Remove range [start, end)
-    virtual nebula::cpp2::ErrorCode
+    virtual ErrorCode
     removeRange(const std::string& start, const std::string& end) = 0;
 
     // Add partId into current storage engine.
@@ -105,26 +105,26 @@ public:
     virtual int32_t totalPartsNum() = 0;
 
     // Ingest sst files
-    virtual nebula::cpp2::ErrorCode ingest(const std::vector<std::string>& files,
+    virtual ErrorCode ingest(const std::vector<std::string>& files,
                                            bool verifyFileChecksum = false) = 0;
 
     // Set Config Option
-    virtual nebula::cpp2::ErrorCode
+    virtual ErrorCode
     setOption(const std::string& configKey, const std::string& configValue) = 0;
 
     // Set DB Config Option
-    virtual nebula::cpp2::ErrorCode
+    virtual ErrorCode
     setDBOption(const std::string& configKey,
                 const std::string& configValue) = 0;
 
-    virtual nebula::cpp2::ErrorCode compact() = 0;
+    virtual ErrorCode compact() = 0;
 
-    virtual nebula::cpp2::ErrorCode flush() = 0;
+    virtual ErrorCode flush() = 0;
 
-    virtual nebula::cpp2::ErrorCode createCheckpoint(const std::string& name) = 0;
+    virtual ErrorCode createCheckpoint(const std::string& name) = 0;
 
     // For meta
-    virtual ErrorOr<nebula::cpp2::ErrorCode, std::string>
+    virtual ErrorOr<ErrorCode, std::string>
     backupTable(const std::string& path,
                 const std::string& tablePrefix,
                 std::function<bool(const folly::StringPiece& key)> filter) = 0;

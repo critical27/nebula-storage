@@ -39,18 +39,18 @@ public:
         , expCtx_(expCtx)
         , isEdge_(isEdge) {}
 
-    nebula::cpp2::ErrorCode checkField(const meta::SchemaProviderIf::Field* field) {
+    ErrorCode checkField(const meta::SchemaProviderIf::Field* field) {
         if (!field) {
             VLOG(1) << "Fail to read prop";
             if (isEdge_) {
-                return nebula::cpp2::ErrorCode::E_EDGE_PROP_NOT_FOUND;
+                return ErrorCode::E_STORAGE_SCHEMA_EDGE_PROP_NOT_FOUND;
             }
-            return nebula::cpp2::ErrorCode::E_TAG_PROP_NOT_FOUND;
+            return ErrorCode::E_STORAGE_SCHEMA_TAG_PROP_NOT_FOUND;
         }
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     getDefaultOrNullValue(const meta::SchemaProviderIf::Field* field,
                           const std::string& name) {
         if (field->hasDefault()) {
@@ -59,13 +59,13 @@ public:
         } else if (field->nullable()) {
             props_[name] = Value::kNullValue;
         } else {
-            return nebula::cpp2::ErrorCode::E_INVALID_FIELD_VALUE;
+            return ErrorCode::E_STORAGE_SCHEMA_NO_DEFAULT_VALUE_AND_NOT_NULLABLE;
         }
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
     // Used for upsert tag/edge
-    nebula::cpp2::ErrorCode checkPropsAndGetDefaultValue() {
+    ErrorCode checkPropsAndGetDefaultValue() {
         // Store checked props
         // For example:
         // set a = 1, b = a + 1, c = 2,             `a` does not require default value and nullable
@@ -81,11 +81,11 @@ public:
                 if (it == checkedProp.end()) {
                     auto field = schema_->field(p);
                     auto ret = checkField(field);
-                    if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+                    if (ret != ErrorCode::SUCCEEDED) {
                         return ret;
                     }
                     ret = getDefaultOrNullValue(field, p);
-                    if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+                    if (ret != ErrorCode::SUCCEEDED) {
                         return ret;
                     }
                     checkedProp.emplace(p);
@@ -95,7 +95,7 @@ public:
             // set field not need default value or nullable
             auto field = schema_->field(prop.first);
             auto ret = checkField(field);
-            if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+            if (ret != ErrorCode::SUCCEEDED) {
                 return ret;
             }
             checkedProp.emplace(prop.first);
@@ -108,13 +108,13 @@ public:
             auto propIter = checkedProp.find(propName);
             if (propIter == checkedProp.end()) {
                 auto ret = getDefaultOrNullValue(&(*fieldIter), propName);
-                if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+                if (ret != ErrorCode::SUCCEEDED) {
                     return ret;
                 }
             }
             ++fieldIter;
         }
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
 protected:
@@ -137,7 +137,7 @@ protected:
     std::unique_ptr<RowWriterV2>                                            rowWriter_;
     // prop -> value
     std::unordered_map<std::string, Value>                                  props_;
-    std::atomic<nebula::cpp2::ErrorCode>                                    exeResult_;
+    std::atomic<ErrorCode>                                    exeResult_;
 
     // updatedProps_ dependent props in value expression
     std::vector<std::pair<std::string, std::unordered_set<std::string>>>    depPropMap_;
@@ -166,7 +166,7 @@ public:
             tagId_ = planContext_->tagId_;
         }
 
-    nebula::cpp2::ErrorCode execute(PartitionID partId, const VertexID& vId) override {
+    ErrorCode execute(PartitionID partId, const VertexID& vId) override {
         CHECK_NOTNULL(planContext_->env_->kvstore_);
         IndexCountWrapper wrapper(planContext_->env_);
 
@@ -182,18 +182,18 @@ public:
                        << std::get<1>(conflict) << ":"
                        << std::get<2>(conflict) << ":"
                        << std::get<3>(conflict);
-            return nebula::cpp2::ErrorCode::E_DATA_CONFLICT_ERROR;
+            return ErrorCode::E_STORAGE_QUERY_CONCURRENT_MODIFY;
         }
 
         auto ret = RelNode::execute(partId, vId);
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             return ret;
         }
 
         if (this->planContext_->resultStat_ == ResultStatus::ILLEGAL_DATA) {
-            return nebula::cpp2::ErrorCode::E_INVALID_DATA;
-        } else if (this->planContext_->resultStat_ ==  ResultStatus::FILTER_OUT) {
-            return nebula::cpp2::ErrorCode::E_FILTER_OUT;
+            return ErrorCode::E_STORAGE_QUERY_INVALID_DATA;
+        } else if (this->planContext_->resultStat_ == ResultStatus::FILTER_OUT) {
+            return ErrorCode::E_STORAGE_QUERY_FILTER_NOT_PASSED;
         }
 
         if (filterNode_->valid()) {
@@ -208,20 +208,20 @@ public:
             this->key_ = filterNode_->key().str();
             ret = this->collTagProp(vId);
         } else {
-            ret = nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND;
+            ret = ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND;
         }
 
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             return ret;
         }
 
         auto batch = this->updateAndWriteBack(partId, vId);
         if (batch == folly::none) {
-            return nebula::cpp2::ErrorCode::E_INVALID_DATA;
+            return ErrorCode::E_STORAGE_QUERY_INVALID_DATA;
         }
 
         folly::Baton<true, std::atomic> baton;
-        auto callback = [&ret, &baton] (nebula::cpp2::ErrorCode code) {
+        auto callback = [&ret, &baton] (ErrorCode code) {
             ret = code;
             baton.post();
         };
@@ -231,39 +231,39 @@ public:
         return ret;
     }
 
-    nebula::cpp2::ErrorCode getLatestTagSchemaAndName() {
+    ErrorCode getLatestTagSchemaAndName() {
         auto schemaIter = tagContext_->schemas_.find(tagId_);
         if (schemaIter == tagContext_->schemas_.end() ||
             schemaIter->second.empty()) {
-            return nebula::cpp2::ErrorCode::E_TAG_NOT_FOUND;
+            return ErrorCode::E_STORAGE_SCHEMA_TAG_NOT_FOUND;
         }
         schema_ = schemaIter->second.back().get();
         if (!schema_) {
             LOG(ERROR) << "Get nullptr schema";
-            return nebula::cpp2::ErrorCode::E_TAG_NOT_FOUND;
+            return ErrorCode::E_STORAGE_SCHEMA_TAG_NOT_FOUND;
         }
 
         auto iter = tagContext_->tagNames_.find(tagId_);
         if (iter == tagContext_->tagNames_.end()) {
             VLOG(1) << "Can't find spaceId " << planContext_->spaceId_
                     << " tagId " << tagId_;
-            return nebula::cpp2::ErrorCode::E_TAG_NOT_FOUND;
+            return ErrorCode::E_STORAGE_SCHEMA_TAG_NOT_FOUND;
         }
         tagName_ = iter->second;
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
     // Insert props row,
     // For insert, condition is always true,
     // Props must have default value or nullable, or set in UpdatedProp_
-    nebula::cpp2::ErrorCode insertTagProps(PartitionID partId, const VertexID& vId) {
+    ErrorCode insertTagProps(PartitionID partId, const VertexID& vId) {
         planContext_->insert_ = true;
         auto ret = getLatestTagSchemaAndName();
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             return ret;
         }
         ret = checkPropsAndGetDefaultValue();
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             return ret;
         }
 
@@ -276,13 +276,13 @@ public:
         key_ = NebulaKeyUtils::vertexKey(planContext_->vIdLen_, partId, vId, tagId_);
         rowWriter_ = std::make_unique<RowWriterV2>(schema_);
 
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
     // collect tag prop
-    nebula::cpp2::ErrorCode collTagProp(const VertexID& vId) {
+    ErrorCode collTagProp(const VertexID& vId) {
         auto ret = getLatestTagSchemaAndName();
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             return ret;
         }
 
@@ -297,7 +297,7 @@ public:
             if (!retVal.ok()) {
                 VLOG(1) << "Bad value for tag: " << tagId_
                         << ", prop " << propName;
-                return nebula::cpp2::ErrorCode::E_TAG_PROP_NOT_FOUND;
+                return ErrorCode::E_STORAGE_QUERY_READ_TAG_PROP_FAILD;
             }
             props_[propName] = std::move(retVal.value());
         }
@@ -313,7 +313,7 @@ public:
         // this->rowWriter_ = std::make_unique<RowWriterV2>(schema.get(), reader->getData());
         rowWriter_ = std::make_unique<RowWriterV2>(schema_);
         val_ = reader_->getData();
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
     folly::Optional<std::string>
@@ -334,7 +334,7 @@ public:
 
         for (auto& e : props_) {
             auto wRet = rowWriter_->setValue(e.first, e.second);
-            if (wRet != WriteResult::SUCCEEDED) {
+            if (wRet != ErrorCode::SUCCEEDED) {
                 LOG(ERROR) << "Add field faild ";
                 return folly::none;
             }
@@ -344,7 +344,7 @@ public:
             = std::make_unique<kvstore::BatchHolder>();
 
         auto wRet = rowWriter_->finish();
-        if (wRet != WriteResult::SUCCEEDED) {
+        if (wRet != ErrorCode::SUCCEEDED) {
             LOG(ERROR) << "Add field faild ";
             return folly::none;
         }
@@ -461,10 +461,10 @@ public:
         edgeType_ = planContext_->edgeType_;
     }
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     execute(PartitionID partId, const cpp2::EdgeKey& edgeKey) override {
         CHECK_NOTNULL(planContext_->env_->kvstore_);
-        auto ret = nebula::cpp2::ErrorCode::SUCCEEDED;
+        auto ret = ErrorCode::SUCCEEDED;
         IndexCountWrapper wrapper(planContext_->env_);
 
         // Update is read-modify-write, which is an atomic operation.
@@ -487,21 +487,21 @@ public:
                        << std::get<3>(conflict) << ":"
                        << std::get<4>(conflict) << ":"
                        << std::get<5>(conflict);
-            return nebula::cpp2::ErrorCode::E_DATA_CONFLICT_ERROR;
+            return ErrorCode::E_STORAGE_QUERY_CONCURRENT_MODIFY;
         }
 
         auto op = [&partId, &edgeKey, this]() -> folly::Optional<std::string> {
             this->exeResult_ = RelNode::execute(partId, edgeKey);
-            if (this->exeResult_ == nebula::cpp2::ErrorCode::SUCCEEDED) {
+            if (this->exeResult_ == ErrorCode::SUCCEEDED) {
                 if (*edgeKey.edge_type_ref() != this->edgeType_) {
-                    this->exeResult_ = nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND;
+                    this->exeResult_ = ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND;
                     return folly::none;
                 }
                 if (this->planContext_->resultStat_ == ResultStatus::ILLEGAL_DATA) {
-                    this->exeResult_ = nebula::cpp2::ErrorCode::E_INVALID_DATA;
+                    this->exeResult_ = ErrorCode::E_STORAGE_QUERY_INVALID_DATA;
                     return folly::none;
                 } else if (this->planContext_->resultStat_ == ResultStatus::FILTER_OUT) {
-                    this->exeResult_ = nebula::cpp2::ErrorCode::E_FILTER_OUT;
+                    this->exeResult_ = ErrorCode::E_STORAGE_QUERY_FILTER_NOT_PASSED;
                     return folly::none;
                 }
 
@@ -517,16 +517,16 @@ public:
                     this->key_ = filterNode_->key().str();
                     this->exeResult_ = this->collEdgeProp(edgeKey);
                 } else {
-                    this->exeResult_ = nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND;
+                    this->exeResult_ = ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND;
                 }
 
-                if (this->exeResult_ != nebula::cpp2::ErrorCode::SUCCEEDED) {
+                if (this->exeResult_ != ErrorCode::SUCCEEDED) {
                     return folly::none;
                 }
                 auto batch = this->updateAndWriteBack(partId, edgeKey);
                 if (batch == folly::none) {
                     // There is an error in updateAndWriteBack
-                    this->exeResult_ = nebula::cpp2::ErrorCode::E_INVALID_DATA;
+                    this->exeResult_ = ErrorCode::E_STORAGE_QUERY_INVALID_DATA;
                 }
                 return batch;
             } else {
@@ -545,7 +545,7 @@ public:
             if (f.valid()) {
                 ret = f.value();
             } else {
-                ret = nebula::cpp2::ErrorCode::E_UNKNOWN;
+                ret = ErrorCode::E_UNKNOWN;
             }
         } else {
             auto batch = op();
@@ -554,7 +554,7 @@ public:
             }
 
             folly::Baton<true, std::atomic> baton;
-            auto callback = [&ret, &baton] (nebula::cpp2::ErrorCode code) {
+            auto callback = [&ret, &baton] (ErrorCode code) {
                 ret = code;
                 baton.post();
             };
@@ -566,40 +566,40 @@ public:
         return ret;
     }
 
-    nebula::cpp2::ErrorCode getLatestEdgeSchemaAndName() {
+    ErrorCode getLatestEdgeSchemaAndName() {
         auto schemaIter = edgeContext_->schemas_.find(std::abs(edgeType_));
         if (schemaIter == edgeContext_->schemas_.end() ||
             schemaIter->second.empty()) {
-            return nebula::cpp2::ErrorCode::E_EDGE_NOT_FOUND;
+            return ErrorCode::E_STORAGE_SCHEMA_EDGE_NOT_FOUND;
         }
         schema_ = schemaIter->second.back().get();
         if (!schema_) {
             LOG(ERROR) << "Get nullptr schema";
-            return nebula::cpp2::ErrorCode::E_EDGE_NOT_FOUND;
+            return ErrorCode::E_STORAGE_SCHEMA_EDGE_NOT_FOUND;
         }
 
         auto iter = edgeContext_->edgeNames_.find(edgeType_);
         if (iter == edgeContext_->edgeNames_.end()) {
             VLOG(1) << "Can't find spaceId " << planContext_->spaceId_
                     << " edgeType " << edgeType_;
-            return nebula::cpp2::ErrorCode::E_EDGE_NOT_FOUND;
+            return ErrorCode::E_STORAGE_SCHEMA_EDGE_NOT_FOUND;
         }
         edgeName_ = iter->second;
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
     // Insert props row,
     // Operator props must have default value or nullable, or set in UpdatedProp_
-    nebula::cpp2::ErrorCode
+    ErrorCode
     insertEdgeProps(const PartitionID partId, const cpp2::EdgeKey& edgeKey) {
         planContext_->insert_ = true;
         auto ret = getLatestEdgeSchemaAndName();
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             return ret;
         }
 
         ret = checkPropsAndGetDefaultValue();
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             return ret;
         }
 
@@ -622,13 +622,13 @@ public:
                                        edgeKey.get_dst().getStr());
         rowWriter_ = std::make_unique<RowWriterV2>(schema_);
 
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
     // Collect edge prop
-    nebula::cpp2::ErrorCode collEdgeProp(const cpp2::EdgeKey& edgeKey) {
+    ErrorCode collEdgeProp(const cpp2::EdgeKey& edgeKey) {
         auto ret = getLatestEdgeSchemaAndName();
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             return ret;
         }
 
@@ -643,7 +643,7 @@ public:
             if (!retVal.ok()) {
                 VLOG(1) << "Bad value for edge: " << edgeType_
                         << ", prop " << propName;
-                return nebula::cpp2::ErrorCode::E_EDGE_PROP_NOT_FOUND;
+                return ErrorCode::E_STORAGE_QUERY_READ_EDGE_PROP_FAILED;
             }
             props_[propName] = std::move(retVal.value());
         }
@@ -664,7 +664,7 @@ public:
         // this->rowWriter_ = std::make_unique<RowWriterV2>(schema.get(), reader->getData());
         rowWriter_ = std::make_unique<RowWriterV2>(schema_);
         val_ = reader_->getData();
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
     folly::Optional<std::string>
@@ -684,7 +684,7 @@ public:
 
         for (auto& e : props_) {
             auto wRet = rowWriter_->setValue(e.first, e.second);
-            if (wRet != WriteResult::SUCCEEDED) {
+            if (wRet != ErrorCode::SUCCEEDED) {
                 VLOG(1) << "Add field faild ";
                 return folly::none;
             }
@@ -694,7 +694,7 @@ public:
             = std::make_unique<kvstore::BatchHolder>();
 
         auto wRet = rowWriter_->finish();
-        if (wRet != WriteResult::SUCCEEDED) {
+        if (wRet != ErrorCode::SUCCEEDED) {
             VLOG(1) << "Add field faild ";
             return folly::none;
         }

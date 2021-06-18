@@ -42,7 +42,7 @@ void ListEdgesProcessor::process(const cpp2::ListEdgesReq& req) {
         iter->next();
     }
     resp_.set_edges(std::move(edges));
-    handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
+    handleErrorCode(ErrorCode::SUCCEEDED);
     onFinished();
 }
 

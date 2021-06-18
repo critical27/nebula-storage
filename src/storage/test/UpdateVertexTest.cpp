@@ -29,13 +29,13 @@ static bool encode(const meta::NebulaSchemaProvider* schema,
     RowWriterV2 writer(schema);
     for (size_t i = 0; i < props.size(); i++) {
         auto r = writer.setValue(i, props[i]);
-        if (r != WriteResult::SUCCEEDED) {
+        if (r != ErrorCode::SUCCEEDED) {
             LOG(ERROR) << "Invalid prop " << i;
             return false;
         }
     }
     auto ret = writer.finish();
-    if (ret != WriteResult::SUCCEEDED) {
+    if (ret != ErrorCode::SUCCEEDED) {
         LOG(ERROR) << "Failed to write data";
         return false;
     }
@@ -74,8 +74,8 @@ static bool mockVertexData(storage::StorageEnv* env, int32_t totalParts, int32_t
         }
 
         env->kvstore_->asyncMultiPut(spaceId, part.first, std::move(data),
-                                     [&](nebula::cpp2::ErrorCode code) {
-                                         ASSERT_EQ(code, nebula::cpp2::ErrorCode::SUCCEEDED);
+                                     [&](ErrorCode code) {
+                                         ASSERT_EQ(code, ErrorCode::SUCCEEDED);
                                          count.fetch_sub(1);
                                          if (count.load() == 0) {
                                              baton.post();
@@ -188,7 +188,7 @@ TEST(UpdateVertexTest, No_Filter_Test) {
     auto prefix = NebulaKeyUtils::vertexPrefix(spaceVidLen, partId, vertexId, tagId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    ASSERT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto reader = RowReaderWrapper::getTagPropReader(env->schemaMan_, spaceId, tagId, iter->val());
@@ -313,7 +313,7 @@ TEST(UpdateVertexTest, Filter_Yield_Test2) {
     auto prefix = NebulaKeyUtils::vertexPrefix(spaceVidLen, partId, vertexId, tagId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto reader = RowReaderWrapper::getTagPropReader(env->schemaMan_, spaceId, tagId, iter->val());
@@ -416,7 +416,7 @@ TEST(UpdateVertexTest, Insertable_Test) {
     auto prefix = NebulaKeyUtils::vertexPrefix(spaceVidLen, partId, vertexId, tagId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto reader = RowReaderWrapper::getTagPropReader(env->schemaMan_, spaceId, tagId, iter->val());
@@ -497,7 +497,7 @@ TEST(UpdateVertexTest, Invalid_Update_Prop_Test) {
     auto prefix = NebulaKeyUtils::vertexPrefix(spaceVidLen, partId, vertexId, tagId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto reader = RowReaderWrapper::getTagPropReader(env->schemaMan_, spaceId, tagId, iter->val());
@@ -603,7 +603,7 @@ TEST(UpdateVertexTest, Invalid_Filter_Test) {
     auto prefix = NebulaKeyUtils::vertexPrefix(spaceVidLen, partId, vertexId, tagId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto reader = RowReaderWrapper::getTagPropReader(env->schemaMan_, spaceId, tagId, iter->val());
@@ -726,7 +726,7 @@ TEST(UpdateVertexTest, Insertable_Filter_Value_Test) {
     auto prefix = NebulaKeyUtils::vertexPrefix(spaceVidLen, partId, vertexId, tagId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto reader = RowReaderWrapper::getTagPropReader(env->schemaMan_, spaceId, tagId, iter->val());
@@ -761,8 +761,8 @@ TEST(UpdateVertexTest, CorruptDataTest) {
     data.emplace_back(std::make_pair(key, ""));
     folly::Baton<> baton;
     env->kvstore_->asyncMultiPut(spaceId, partId, std::move(data),
-        [&](nebula::cpp2::ErrorCode code) {
-            ASSERT_EQ(code, nebula::cpp2::ErrorCode::SUCCEEDED);
+        [&](ErrorCode code) {
+            ASSERT_EQ(code, ErrorCode::SUCCEEDED);
             baton.post();
         });
     baton.wait();
@@ -978,7 +978,7 @@ TEST(UpdateVertexTest, TTL_Insert_No_Exist_Test) {
     auto prefix = NebulaKeyUtils::vertexPrefix(spaceVidLen, partId, vertexId, tagId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto reader = RowReaderWrapper::getTagPropReader(env->schemaMan_, spaceId, tagId, iter->val());
@@ -1099,7 +1099,7 @@ TEST(UpdateVertexTest, TTL_Insert_Test) {
     auto prefix = NebulaKeyUtils::vertexPrefix(spaceVidLen, partId, vertexId, tagId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto schema = env->schemaMan_->getTagSchema(spaceId, tagId);
@@ -1280,7 +1280,7 @@ TEST(UpdateVertexTest, Insertable_In_Set_Test) {
     auto prefix = NebulaKeyUtils::vertexPrefix(spaceVidLen, partId, vertexId, tagId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto reader = RowReaderWrapper::getTagPropReader(env->schemaMan_, spaceId, tagId, iter->val());
@@ -1355,7 +1355,7 @@ TEST(UpdateVertexTest, Update_Multi_tag_Test) {
     auto prefix = NebulaKeyUtils::vertexPrefix(spaceVidLen, partId, vertexId, tagId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    ASSERT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto reader = RowReaderWrapper::getTagPropReader(env->schemaMan_, spaceId, tagId, iter->val());
@@ -1427,7 +1427,7 @@ TEST(UpdateVertexTest, Upsert_Multi_tag_Test) {
     auto prefix = NebulaKeyUtils::vertexPrefix(spaceVidLen, partId, vertexId, tagId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    ASSERT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto reader = RowReaderWrapper::getTagPropReader(env->schemaMan_, spaceId, tagId, iter->val());
@@ -1499,7 +1499,7 @@ TEST(UpdateVertexTest, Upsert_Field_Type_And_Value_Match_Test) {
     auto prefix = NebulaKeyUtils::vertexPrefix(spaceVidLen, partId, vertexId, tagId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-    ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+    ASSERT_EQ(ErrorCode::SUCCEEDED, ret);
     EXPECT_TRUE(iter && iter->valid());
 
     auto reader = RowReaderWrapper::getTagPropReader(env->schemaMan_, spaceId, tagId, iter->val());

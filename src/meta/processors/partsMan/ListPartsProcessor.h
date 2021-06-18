@@ -27,11 +27,11 @@ private:
 
 
     // Get parts alloc information
-    ErrorOr<nebula::cpp2::ErrorCode, std::unordered_map<PartitionID, std::vector<HostAddr>>>
+    ErrorOr<ErrorCode, std::unordered_map<PartitionID, std::vector<HostAddr>>>
     getAllParts();
 
     // Get all parts with storage leader distribution
-    nebula::cpp2::ErrorCode getLeaderDist(std::vector<cpp2::PartItem>& partItems);
+    ErrorCode getLeaderDist(std::vector<cpp2::PartItem>& partItems);
 
 private:
     GraphSpaceID                                        spaceId_;

@@ -25,12 +25,12 @@ void DropTagProcessor::process(const cpp2::DropTagReq& req) {
         resp_.set_id(to(tagId, EntryType::TAG));
     } else {
         auto retCode = nebula::error(iRet);
-        if (retCode == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
+        if (retCode == ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND) {
             if (req.get_if_exists()) {
-                retCode = nebula::cpp2::ErrorCode::SUCCEEDED;
+                retCode = ErrorCode::SUCCEEDED;
             } else {
                 LOG(ERROR) << "Drop tag failed :" << tagName << " not found.";
-                retCode = nebula::cpp2::ErrorCode::E_TAG_NOT_FOUND;
+                retCode = ErrorCode::E_META_SCHEMA_TAG_NOT_FOUND;
             }
         } else {
             LOG(ERROR) << "Get Tag failed, tag name " << tagName
@@ -49,7 +49,7 @@ void DropTagProcessor::process(const cpp2::DropTagReq& req) {
     }
     if (!nebula::value(indexes).empty()) {
         LOG(ERROR) << "Drop tag error, index conflict, please delete index first.";
-        handleErrorCode(nebula::cpp2::ErrorCode::E_CONFLICT);
+        handleErrorCode(ErrorCode::E_META_SCHEMA_DROP_FORBIDDEN_WHEN_HAS_INDEX);
         onFinished();
         return;
     }
@@ -58,12 +58,12 @@ void DropTagProcessor::process(const cpp2::DropTagReq& req) {
     if (nebula::ok(ftIdxRet)) {
         LOG(ERROR) << "Drop tag error, fulltext index conflict, "
                    << "please delete fulltext index first.";
-        handleErrorCode(nebula::cpp2::ErrorCode::E_CONFLICT);
+        handleErrorCode(ErrorCode::E_META_SCHEMA_DROP_FORBIDDEN_WHEN_HAS_FULLTEXT_INDEX);
         onFinished();
         return;
     }
 
-    if (nebula::error(ftIdxRet) != nebula::cpp2::ErrorCode::E_INDEX_NOT_FOUND) {
+    if (nebula::error(ftIdxRet) != ErrorCode::E_META_FULLTEXT_INDEX_NOT_FOUND) {
         handleErrorCode(nebula::error(ftIdxRet));
         onFinished();
         return;
@@ -82,7 +82,7 @@ void DropTagProcessor::process(const cpp2::DropTagReq& req) {
     doSyncMultiRemoveAndUpdate(std::move(keys));
 }
 
-ErrorOr<nebula::cpp2::ErrorCode, std::vector<std::string>>
+ErrorOr<ErrorCode, std::vector<std::string>>
 DropTagProcessor::getTagKeys(GraphSpaceID id, TagID tagId) {
     std::vector<std::string> keys;
     auto key = MetaServiceUtils::schemaTagPrefix(id, tagId);

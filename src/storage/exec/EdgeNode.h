@@ -25,7 +25,7 @@ public:
         return iter_.get();
     }
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     collectEdgePropsIfValid(NullHandler nullHandler,
                             PropHandler valueHandler) {
         if (!iter_ || !iter_->valid()) {
@@ -116,9 +116,9 @@ public:
                   Expression* exp = nullptr)
         : EdgeNode(planCtx, ctx, edgeType, props, expCtx, exp) {}
 
-    nebula::cpp2::ErrorCode execute(PartitionID partId, const cpp2::EdgeKey& edgeKey) override {
+    ErrorCode execute(PartitionID partId, const cpp2::EdgeKey& edgeKey) override {
         auto ret = RelNode::execute(partId, edgeKey);
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             return ret;
         }
 
@@ -126,7 +126,7 @@ public:
                 << ", prop size " << props_->size();
         if (edgeType_ !=  *edgeKey.edge_type_ref()) {
             iter_.reset();
-            return nebula::cpp2::ErrorCode::SUCCEEDED;
+            return ErrorCode::SUCCEEDED;
         }
         prefix_ = NebulaKeyUtils::edgePrefix(planContext_->vIdLen_,
                                              partId,
@@ -136,7 +136,7 @@ public:
                                              (*edgeKey.dst_ref()).getStr());
         std::unique_ptr<kvstore::KVIterator> iter;
         ret = planContext_->env_->kvstore_->prefix(planContext_->spaceId_, partId, prefix_, &iter);
-        if (ret == nebula::cpp2::ErrorCode::SUCCEEDED && iter && iter->valid()) {
+        if (ret == ErrorCode::SUCCEEDED && iter && iter->valid()) {
             if (planContext_->env_->txnMan_ &&
                 planContext_->env_->txnMan_->enableToss(planContext_->spaceId_)) {
                 bool stopAtFirstEdge = true;
@@ -165,9 +165,9 @@ public:
                    Expression* exp = nullptr)
         : EdgeNode(planCtx, ctx, edgeType, props, expCtx, exp) {}
 
-    nebula::cpp2::ErrorCode execute(PartitionID partId, const VertexID& vId) override {
+    ErrorCode execute(PartitionID partId, const VertexID& vId) override {
         auto ret = RelNode::execute(partId, vId);
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             return ret;
         }
 
@@ -176,7 +176,7 @@ public:
         std::unique_ptr<kvstore::KVIterator> iter;
         prefix_ = NebulaKeyUtils::edgePrefix(planContext_->vIdLen_, partId, vId, edgeType_);
         ret = planContext_->env_->kvstore_->prefix(planContext_->spaceId_, partId, prefix_, &iter);
-        if (ret == nebula::cpp2::ErrorCode::SUCCEEDED && iter && iter->valid()) {
+        if (ret == ErrorCode::SUCCEEDED && iter && iter->valid()) {
             if (planContext_->env_->txnMan_ &&
                 planContext_->env_->txnMan_->enableToss(planContext_->spaceId_)) {
                 bool stopAtFirstEdge = false;

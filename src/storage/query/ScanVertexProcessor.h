@@ -39,7 +39,7 @@ private:
                                                        executor) {
     }
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     checkAndBuildContexts(const cpp2::ScanVertexRequest& req) override;
 
     void buildTagColName(const std::vector<cpp2::VertexProp>& tagProps);

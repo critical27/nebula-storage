@@ -48,14 +48,14 @@ protected:
 
     void onProcessFinished() override;
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     checkAndBuildContexts(const cpp2::GetPropRequest& req) override;
 
-    nebula::cpp2::ErrorCode checkRequest(const cpp2::GetPropRequest& req);
+    ErrorCode checkRequest(const cpp2::GetPropRequest& req);
 
-    nebula::cpp2::ErrorCode buildTagContext(const cpp2::GetPropRequest& req);
+    ErrorCode buildTagContext(const cpp2::GetPropRequest& req);
 
-    nebula::cpp2::ErrorCode buildEdgeContext(const cpp2::GetPropRequest& req);
+    ErrorCode buildEdgeContext(const cpp2::GetPropRequest& req);
 
     void buildTagColName(const std::vector<cpp2::VertexProp>& tagProps);
 

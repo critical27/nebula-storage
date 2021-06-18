@@ -92,11 +92,11 @@ TEST(LogAppend, MultiThreadAppend) {
                     auto fut = leader->appendAsync(
                         0, folly::stringPrintf("Log %03d for t%d", j, i));
                     if (fut.isReady() &&
-                        fut.value() == AppendLogResult::E_BUFFER_OVERFLOW) {
+                        fut.value() == ErrorCode::E_STORAGE_RAFT_BUFFER_OVERFLOW) {
                         LOG(FATAL) << "Should not reach here";
                     } else if (j == numLogs) {
                         // Only wait on the last log messaage
-                        ASSERT_EQ(AppendLogResult::SUCCEEDED, std::move(fut).get());
+                        ASSERT_EQ(ErrorCode::SUCCEEDED, std::move(fut).get());
                     }
                     break;
                 } while (true);

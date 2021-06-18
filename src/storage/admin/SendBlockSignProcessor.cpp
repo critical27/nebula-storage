@@ -15,7 +15,7 @@ void SendBlockSignProcessor::process(const cpp2::BlockingSignRequest& req) {
     LOG(INFO) << "Receive block sign for space " << req.get_space_id() << ", block: " <<  sign;
 
     auto code = env_->kvstore_->setWriteBlocking(spaceId, sign);
-    if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (code != ErrorCode::SUCCEEDED) {
         cpp2::PartitionResult thriftRet;
         thriftRet.set_code(code);
         codes_.emplace_back(std::move(thriftRet));

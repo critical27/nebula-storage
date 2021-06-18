@@ -35,18 +35,18 @@ JobDescription::JobDescription(JobID id,
                                  startTime_(startTime),
                                  stopTime_(stopTime) {}
 
-ErrorOr<nebula::cpp2::ErrorCode, JobDescription>
+ErrorOr<ErrorCode, JobDescription>
 JobDescription::makeJobDescription(folly::StringPiece rawkey,
                                    folly::StringPiece rawval) {
     try {
         if (!isJobKey(rawkey)) {
-            return nebula::cpp2::ErrorCode::E_INVALID_JOB;
+            return ErrorCode::E_META_JOB_BUILD_JOB_DESC_FAILED;
         }
         auto key = parseKey(rawkey);
 
         if (!isSupportedValue(rawval)) {
             LOG(ERROR) << "not supported data ver of job " << key;
-            return nebula::cpp2::ErrorCode::E_INVALID_JOB;
+            return ErrorCode::E_META_JOB_BUILD_JOB_DESC_FAILED;
         }
         auto tup = parseVal(rawval);
 
@@ -62,7 +62,7 @@ JobDescription::makeJobDescription(folly::StringPiece rawkey,
     } catch(std::exception& ex) {
         LOG(ERROR) << ex.what();
     }
-    return nebula::cpp2::ErrorCode::E_INVALID_JOB;
+    return ErrorCode::E_META_JOB_BUILD_JOB_DESC_FAILED;
 }
 
 std::string JobDescription::jobKey() const {
@@ -179,12 +179,12 @@ bool JobDescription::isJobKey(const folly::StringPiece& rawKey) {
     return rawKey.size() == JobUtil::jobPrefix().length() + sizeof(int32_t);
 }
 
-ErrorOr<nebula::cpp2::ErrorCode, JobDescription>
+ErrorOr<ErrorCode, JobDescription>
 JobDescription::loadJobDescription(JobID iJob, nebula::kvstore::KVStore* kv) {
     auto key = makeJobKey(iJob);
     std::string val;
     auto retCode = kv->get(kDefaultSpaceId, kDefaultPartId, key, &val);
-    if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (retCode != ErrorCode::SUCCEEDED) {
         LOG(ERROR) << "Loading Job Description Failed"
                    << apache::thrift::util::enumNameSafe(retCode);
         return retCode;

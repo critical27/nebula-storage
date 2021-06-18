@@ -93,12 +93,12 @@ TEST(NebulaStoreTest, SimpleTest) {
     EXPECT_EQ(folly::stringPrintf("%s/disk2/nebula/2", rootPath.path()),
               store->spaces_[2]->engines_[1]->getDataRoot());
 
-    store->asyncMultiPut(0, 0, {{"key", "val"}}, [](nebula::cpp2::ErrorCode code) {
-        EXPECT_EQ(nebula::cpp2::ErrorCode::E_SPACE_NOT_FOUND, code);
+    store->asyncMultiPut(0, 0, {{"key", "val"}}, [](ErrorCode code) {
+        EXPECT_EQ(ErrorCode::E_STORAGE_SPACE_NOT_FOUND, code);
     });
 
-    store->asyncMultiPut(1, 6, {{"key", "val"}}, [](nebula::cpp2::ErrorCode code) {
-        EXPECT_EQ(nebula::cpp2::ErrorCode::E_PART_NOT_FOUND, code);
+    store->asyncMultiPut(1, 6, {{"key", "val"}}, [](ErrorCode code) {
+        EXPECT_EQ(ErrorCode::E_STORAGE_PART_NOT_FOUND, code);
     });
 
     VLOG(1) << "Put some data then read them...";
@@ -111,8 +111,8 @@ TEST(NebulaStoreTest, SimpleTest) {
                           folly::stringPrintf("val_%d", i));
     }
     folly::Baton<true, std::atomic> baton;
-    store->asyncMultiPut(1, 1, std::move(data), [&] (nebula::cpp2::ErrorCode code) {
-        EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, code);
+    store->asyncMultiPut(1, 1, std::move(data), [&] (ErrorCode code) {
+        EXPECT_EQ(ErrorCode::SUCCEEDED, code);
         baton.post();
     });
     baton.wait();
@@ -123,7 +123,7 @@ TEST(NebulaStoreTest, SimpleTest) {
     s = prefix + s;
     e = prefix + e;
     std::unique_ptr<KVIterator> iter;
-    EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, store->range(1, 1, s, e, &iter));
+    EXPECT_EQ(ErrorCode::SUCCEEDED, store->range(1, 1, s, e, &iter));
     int num = 0;
     auto prefixLen = prefix.size();
     while (iter->valid()) {
@@ -334,8 +334,8 @@ TEST(NebulaStoreTest, ThreeCopiesTest) {
         {
             folly::Baton<true, std::atomic> baton;
             stores[index]->asyncMultiPut(0, part, std::move(data),
-                                         [&baton](nebula::cpp2::ErrorCode code) {
-                EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, code);
+                                         [&baton](ErrorCode code) {
+                EXPECT_EQ(ErrorCode::SUCCEEDED, code);
                 baton.post();
             });
             baton.wait();
@@ -354,7 +354,7 @@ TEST(NebulaStoreTest, ThreeCopiesTest) {
                 ASSERT(ok(ret));
                 auto* engine = value(std::move(ret));
                 std::unique_ptr<KVIterator> iter;
-                ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, engine->range(s, e, &iter));
+                ASSERT_EQ(ErrorCode::SUCCEEDED, engine->range(s, e, &iter));
                 int num = 0;
                 auto prefixLen = prefix.size();
                 while (iter->valid()) {
@@ -375,8 +375,8 @@ TEST(NebulaStoreTest, ThreeCopiesTest) {
             stores[followerIndex]->asyncMultiPut(0,
                                                  part,
                                                  {{"key", "val"}},
-                                                 [&baton](nebula::cpp2::ErrorCode code) {
-                EXPECT_EQ(nebula::cpp2::ErrorCode::E_LEADER_CHANGED, code);
+                                                 [&baton](ErrorCode code) {
+                EXPECT_EQ(ErrorCode::E_LEADER_CHANGED, code);
                 baton.post();
             });
             baton.wait();
@@ -385,7 +385,7 @@ TEST(NebulaStoreTest, ThreeCopiesTest) {
         {
             std::string value;
             auto ret = stores[followerIndex]->get(0, part, "key", &value);
-            EXPECT_EQ(nebula::cpp2::ErrorCode::E_LEADER_CHANGED, ret);
+            EXPECT_EQ(ErrorCode::E_LEADER_CHANGED, ret);
         }
     }
 }
@@ -470,7 +470,7 @@ TEST(NebulaStoreTest, TransLeaderTest) {
         auto partRet = stores[index]->part(spaceId, partId);
         CHECK(ok(partRet));
         auto part = value(partRet);
-        part->asyncTransferLeader(targetAddr, [&] (nebula::cpp2::ErrorCode) {
+        part->asyncTransferLeader(targetAddr, [&] (ErrorCode) {
             baton.post();
         });
         baton.wait();
@@ -492,7 +492,7 @@ TEST(NebulaStoreTest, TransLeaderTest) {
         CHECK(ok(ret));
         auto part = nebula::value(ret);
         LOG(INFO) << "Transfer part " << partId << " leader to " << targetAddr;
-        part->asyncTransferLeader(targetAddr, [&] (nebula::cpp2::ErrorCode) {
+        part->asyncTransferLeader(targetAddr, [&] (ErrorCode) {
             baton.post();
         });
         baton.wait();
@@ -551,12 +551,12 @@ TEST(NebulaStoreTest, CheckpointTest) {
     EXPECT_EQ(folly::stringPrintf("%s/disk2/nebula/2", srcPath.path()),
               store->spaces_[2]->engines_[1]->getDataRoot());
 
-    store->asyncMultiPut(0, 0, {{"key", "val"}}, [](nebula::cpp2::ErrorCode code) {
-        EXPECT_EQ(nebula::cpp2::ErrorCode::E_SPACE_NOT_FOUND, code);
+    store->asyncMultiPut(0, 0, {{"key", "val"}}, [](ErrorCode code) {
+        EXPECT_EQ(ErrorCode::E_STORAGE_SPACE_NOT_FOUND, code);
     });
 
-    store->asyncMultiPut(1, 6, {{"key", "val"}}, [](nebula::cpp2::ErrorCode code) {
-        EXPECT_EQ(nebula::cpp2::ErrorCode::E_PART_NOT_FOUND, code);
+    store->asyncMultiPut(1, 6, {{"key", "val"}}, [](ErrorCode code) {
+        EXPECT_EQ(ErrorCode::E_STORAGE_PART_NOT_FOUND, code);
     });
 
     VLOG(1) << "Put some data then read them...";
@@ -569,8 +569,8 @@ TEST(NebulaStoreTest, CheckpointTest) {
                           folly::stringPrintf("val_%d", i));
     }
     folly::Baton<true, std::atomic> baton;
-    store->asyncMultiPut(1, 1, std::move(data), [&] (nebula::cpp2::ErrorCode code) {
-        EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, code);
+    store->asyncMultiPut(1, 1, std::move(data), [&] (ErrorCode code) {
+        EXPECT_EQ(ErrorCode::SUCCEEDED, code);
         baton.post();
     });
     baton.wait();
@@ -667,8 +667,8 @@ TEST(NebulaStoreTest, ThreeCopiesCheckpointTest) {
         {
             folly::Baton<true, std::atomic> baton;
             stores[index]->asyncMultiPut(0, part, std::move(data),
-                                         [&baton](nebula::cpp2::ErrorCode code) {
-                EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, code);
+                                         [&baton](ErrorCode code) {
+                EXPECT_EQ(ErrorCode::SUCCEEDED, code);
                 baton.post();
             });
             baton.wait();
@@ -687,7 +687,7 @@ TEST(NebulaStoreTest, ThreeCopiesCheckpointTest) {
                 ASSERT(ok(ret));
                 auto* engine = value(std::move(ret));
                 std::unique_ptr<KVIterator> iter;
-                ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, engine->range(s, e, &iter));
+                ASSERT_EQ(ErrorCode::SUCCEEDED, engine->range(s, e, &iter));
                 int num = 0;
                 auto prefixLen = prefix.size();
                 while (iter->valid()) {
@@ -709,8 +709,8 @@ TEST(NebulaStoreTest, ThreeCopiesCheckpointTest) {
             stores[followerIndex]->asyncMultiPut(0,
                                                  part,
                                                  {{"key", "val"}},
-                                                 [&baton](nebula::cpp2::ErrorCode code) {
-                EXPECT_EQ(nebula::cpp2::ErrorCode::E_LEADER_CHANGED, code);
+                                                 [&baton](ErrorCode code) {
+                EXPECT_EQ(ErrorCode::E_LEADER_CHANGED, code);
                 baton.post();
             });
             baton.wait();
@@ -789,7 +789,7 @@ TEST(NebulaStoreTest, ThreeCopiesCheckpointTest) {
                 ASSERT(ok(ret));
                 auto* engine = value(std::move(ret));
                 std::unique_ptr<KVIterator> iter;
-                ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, engine->range(s, e, &iter));
+                ASSERT_EQ(ErrorCode::SUCCEEDED, engine->range(s, e, &iter));
                 int num = 0;
                 while (iter->valid()) {
                     iter->next();
@@ -841,8 +841,8 @@ TEST(NebulaStoreTest, AtomicOpBatchTest) {
         };
 
         folly::Baton<true, std::atomic> baton;
-        auto callback = [&] (nebula::cpp2::ErrorCode code) {
-            EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, code);
+        auto callback = [&] (ErrorCode code) {
+            EXPECT_EQ(ErrorCode::SUCCEEDED, code);
             baton.post();
         };
         store->asyncAtomicOp(1, 0, atomic, callback);
@@ -850,7 +850,7 @@ TEST(NebulaStoreTest, AtomicOpBatchTest) {
         std::unique_ptr<kvstore::KVIterator> iter;
         std::string prefix("key");
         auto ret = store->prefix(1, 0, prefix, &iter);
-        EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+        EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
         while (iter->valid()) {
             result.emplace_back(iter->key(), iter->val());
             iter->next();
@@ -879,8 +879,8 @@ TEST(NebulaStoreTest, AtomicOpBatchTest) {
         };
 
         folly::Baton<true, std::atomic> baton;
-        auto callback = [&] (nebula::cpp2::ErrorCode code) {
-            EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, code);
+        auto callback = [&] (ErrorCode code) {
+            EXPECT_EQ(ErrorCode::SUCCEEDED, code);
             baton.post();
         };
         store->asyncAtomicOp(1, 0, atomic, callback);
@@ -888,7 +888,7 @@ TEST(NebulaStoreTest, AtomicOpBatchTest) {
         std::unique_ptr<kvstore::KVIterator> iter;
         std::string prefix("key");
         auto ret = store->prefix(1, 0, prefix, &iter);
-        EXPECT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+        EXPECT_EQ(ErrorCode::SUCCEEDED, ret);
         while (iter->valid()) {
             result.emplace_back(iter->key(), iter->val());
             iter->next();

@@ -37,8 +37,8 @@ void CreateFTIndexProcessor::process(const cpp2::CreateFTIndexReq& req) {
     if (!iter->valid()) {
         LOG(ERROR) << "Edge or Tag could not be found";
         auto eCode = isEdge
-                  ? nebula::cpp2::ErrorCode::E_EDGE_NOT_FOUND
-                  : nebula::cpp2::ErrorCode::E_TAG_NOT_FOUND;
+                  ? ErrorCode::E_META_SCHEMA_EDGE_NOT_FOUND
+                  : ErrorCode::E_META_SCHEMA_TAG_NOT_FOUND;
         handleErrorCode(eCode);
         onFinished();
         return;
@@ -54,8 +54,8 @@ void CreateFTIndexProcessor::process(const cpp2::CreateFTIndexReq& req) {
         if (targetCol == columns.end()) {
             LOG(ERROR) << "Column not found : " << col;
             auto eCode = isEdge
-                       ? nebula::cpp2::ErrorCode::E_EDGE_PROP_NOT_FOUND
-                       : nebula::cpp2::ErrorCode::E_TAG_PROP_NOT_FOUND;
+                       ? ErrorCode::E_STORAGE_SCHEMA_EDGE_PROP_NOT_FOUND
+                       : ErrorCode::E_STORAGE_SCHEMA_TAG_PROP_NOT_FOUND;
             handleErrorCode(eCode);
             onFinished();
             return;
@@ -65,7 +65,7 @@ void CreateFTIndexProcessor::process(const cpp2::CreateFTIndexReq& req) {
             targetCol->get_type().get_type() != meta::cpp2::PropertyType::FIXED_STRING) {
             LOG(ERROR) << "Column data type error : "
                        << apache::thrift::util::enumNameSafe(targetCol->get_type().get_type());
-            handleErrorCode(nebula::cpp2::ErrorCode::E_UNSUPPORTED);
+            handleErrorCode(ErrorCode::E_META_FULLTEXT_INVALID_COLUMN_TYPE);
             onFinished();
             return;
         }
@@ -78,7 +78,7 @@ void CreateFTIndexProcessor::process(const cpp2::CreateFTIndexReq& req) {
             LOG(ERROR) << "Unsupported data length more than "
                        << MAX_INDEX_TYPE_LENGTH << " bytes : "
                        << col << "(" << *targetCol->get_type().get_type_length() << ")";
-            handleErrorCode(nebula::cpp2::ErrorCode::E_UNSUPPORTED);
+            handleErrorCode(ErrorCode::E_META_SCHEMA_STRING_PROPERTY_EXCEED_MAX_LENGTH);
             onFinished();
             return;
         }
@@ -103,13 +103,13 @@ void CreateFTIndexProcessor::process(const cpp2::CreateFTIndexReq& req) {
         auto indexItem = MetaServiceUtils::parsefulltextIndex(it->val());
         if (indexName == name) {
             LOG(ERROR) << "Fulltext index exist : " << indexName;
-            handleErrorCode(nebula::cpp2::ErrorCode::E_EXISTED);
+            handleErrorCode(ErrorCode::E_META_FULLTEXT_INDEX_EXISTED);
             onFinished();
             return;
         }
         if (index.get_depend_schema() == indexItem.get_depend_schema()) {
             LOG(ERROR) << "Depends on the same schema , index : " << indexName;
-            handleErrorCode(nebula::cpp2::ErrorCode::E_EXISTED);
+            handleErrorCode(ErrorCode::E_META_FULLTEXT_INDEX_EXISTED);
             onFinished();
             return;
         }
@@ -128,9 +128,9 @@ void DropFTIndexProcessor::process(const cpp2::DropFTIndexReq& req) {
     auto ret = doGet(indexKey);
     if (!nebula::ok(ret)) {
         auto retCode = nebula::error(ret);
-        if (retCode == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
+        if (retCode == ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND) {
             LOG(ERROR) << "Drop fulltext index failed, Fulltext index not exists.";
-            handleErrorCode(nebula::cpp2::ErrorCode::E_INDEX_NOT_FOUND);
+            handleErrorCode(ErrorCode::E_META_FULLTEXT_INDEX_NOT_FOUND);
             onFinished();
             return;
         }
@@ -165,7 +165,7 @@ void ListFTIndexesProcessor::process(const cpp2::ListFTIndexesReq&) {
         iter->next();
     }
     resp_.set_indexes(std::move(indexes));
-    handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
+    handleErrorCode(ErrorCode::SUCCEEDED);
     onFinished();
 }
 

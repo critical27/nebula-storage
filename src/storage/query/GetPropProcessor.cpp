@@ -25,7 +25,7 @@ void GetPropProcessor::process(const cpp2::GetPropRequest& req) {
 void GetPropProcessor::doProcess(const cpp2::GetPropRequest& req) {
     spaceId_ = req.get_space_id();
     auto retCode = getSpaceVidLen(spaceId_);
-    if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (retCode != ErrorCode::SUCCEEDED) {
         for (auto& p : req.get_parts()) {
             pushResultCode(retCode, p.first);
         }
@@ -35,7 +35,7 @@ void GetPropProcessor::doProcess(const cpp2::GetPropRequest& req) {
     planContext_ = std::make_unique<PlanContext>(env_, spaceId_, spaceVidLen_, isIntId_);
 
     retCode = checkAndBuildContexts(req);
-    if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (retCode != ErrorCode::SUCCEEDED) {
         for (auto& p : req.get_parts()) {
             pushResultCode(retCode, p.first);
         }
@@ -54,13 +54,13 @@ void GetPropProcessor::doProcess(const cpp2::GetPropRequest& req) {
                 if (!NebulaKeyUtils::isValidVidLen(spaceVidLen_, vId)) {
                     LOG(ERROR) << "Space " << spaceId_ << ", vertex length invalid, "
                                << " space vid len: " << spaceVidLen_ << ",  vid is " << vId;
-                    pushResultCode(nebula::cpp2::ErrorCode::E_INVALID_VID, partId);
+                    pushResultCode(ErrorCode::E_STORAGE_QUERY_INVALID_VID_LEN, partId);
                     onFinished();
                     return;
                 }
 
                 auto ret = plan.go(partId, vId);
-                if (ret != nebula::cpp2::ErrorCode::SUCCEEDED &&
+                if (ret != ErrorCode::SUCCEEDED &&
                     failedParts.find(partId) == failedParts.end()) {
                     failedParts.emplace(partId);
                     handleErrorCode(ret, spaceId_, partId);
@@ -86,13 +86,13 @@ void GetPropProcessor::doProcess(const cpp2::GetPropRequest& req) {
                                << "space vid len: " << spaceVidLen_
                                << ", edge srcVid: " << *edgeKey.src_ref()
                                << ", dstVid: " << *edgeKey.dst_ref();
-                    pushResultCode(nebula::cpp2::ErrorCode::E_INVALID_VID, partId);
+                    pushResultCode(ErrorCode::E_STORAGE_QUERY_INVALID_VID_LEN, partId);
                     onFinished();
                     return;
                 }
 
                 auto ret = plan.go(partId, edgeKey);
-                if (ret != nebula::cpp2::ErrorCode::SUCCEEDED &&
+                if (ret != ErrorCode::SUCCEEDED &&
                     failedParts.find(partId) == failedParts.end()) {
                     failedParts.emplace(partId);
                     handleErrorCode(ret, spaceId_, partId);
@@ -139,44 +139,44 @@ StoragePlan<cpp2::EdgeKey> GetPropProcessor::buildEdgePlan(nebula::DataSet* resu
     return plan;
 }
 
-nebula::cpp2::ErrorCode
+ErrorCode
 GetPropProcessor::checkRequest(const cpp2::GetPropRequest& req) {
     if (!req.vertex_props_ref().has_value() && !req.edge_props_ref().has_value()) {
-        return nebula::cpp2::ErrorCode::E_INVALID_OPERATION;
+        return ErrorCode::E_STORAGE_QUERY_INVALID_REQUEST;
     } else if (req.vertex_props_ref().has_value() && req.edge_props_ref().has_value()) {
-        return nebula::cpp2::ErrorCode::E_INVALID_OPERATION;
+        return ErrorCode::E_STORAGE_QUERY_INVALID_REQUEST;
     }
     if (req.vertex_props_ref().has_value()) {
         isEdge_ = false;
     } else {
         isEdge_ = true;
     }
-    return nebula::cpp2::ErrorCode::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
-nebula::cpp2::ErrorCode
+ErrorCode
 GetPropProcessor::checkAndBuildContexts(const cpp2::GetPropRequest& req) {
     auto code = checkRequest(req);
-    if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (code != ErrorCode::SUCCEEDED) {
         return code;
     }
     if (!isEdge_) {
         code = getSpaceVertexSchema();
-        if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (code != ErrorCode::SUCCEEDED) {
             return code;
         }
         return buildTagContext(req);
     } else {
         code = getSpaceEdgeSchema();
-        if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (code != ErrorCode::SUCCEEDED) {
             return code;
         }
         return buildEdgeContext(req);
     }
 }
 
-nebula::cpp2::ErrorCode GetPropProcessor::buildTagContext(const cpp2::GetPropRequest& req) {
-    auto ret = nebula::cpp2::ErrorCode::SUCCEEDED;
+ErrorCode GetPropProcessor::buildTagContext(const cpp2::GetPropRequest& req) {
+    auto ret = ErrorCode::SUCCEEDED;
     if ((*req.vertex_props_ref()).empty()) {
         // If no props specified, get all property of all tagId in space
         auto returnProps = buildAllTagProps();
@@ -190,15 +190,15 @@ nebula::cpp2::ErrorCode GetPropProcessor::buildTagContext(const cpp2::GetPropReq
         buildTagColName(returnProps);
     }
 
-    if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (ret != ErrorCode::SUCCEEDED) {
         return ret;
     }
     buildTagTTLInfo();
-    return nebula::cpp2::ErrorCode::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
-nebula::cpp2::ErrorCode GetPropProcessor::buildEdgeContext(const cpp2::GetPropRequest& req) {
-    auto ret = nebula::cpp2::ErrorCode::SUCCEEDED;
+ErrorCode GetPropProcessor::buildEdgeContext(const cpp2::GetPropRequest& req) {
+    auto ret = ErrorCode::SUCCEEDED;
     if ((*req.edge_props_ref()).empty()) {
         // If no props specified, get all property of all tagId in space
         auto returnProps = buildAllEdgeProps(cpp2::EdgeDirection::BOTH);
@@ -212,11 +212,11 @@ nebula::cpp2::ErrorCode GetPropProcessor::buildEdgeContext(const cpp2::GetPropRe
         buildEdgeColName(returnProps);
     }
 
-    if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (ret != ErrorCode::SUCCEEDED) {
         return ret;
     }
     buildEdgeTTLInfo();
-    return nebula::cpp2::ErrorCode::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 void GetPropProcessor::buildTagColName(const std::vector<cpp2::VertexProp>& tagProps) {

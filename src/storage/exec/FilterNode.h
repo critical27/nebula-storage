@@ -39,9 +39,9 @@ public:
         , expCtx_(expCtx)
         , filterExp_(exp) {}
 
-    nebula::cpp2::ErrorCode execute(PartitionID partId, const T& vId) override {
+    ErrorCode execute(PartitionID partId, const T& vId) override {
         auto ret = RelNode<T>::execute(partId, vId);
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             return ret;
         }
 
@@ -56,7 +56,7 @@ public:
             }
             break;
         } while (true);
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
 private:

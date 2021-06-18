@@ -40,9 +40,9 @@ public:
         UNUSED(tagContext_);
     }
 
-    nebula::cpp2::ErrorCode execute(PartitionID partId, const VertexID& vId) override {
+    ErrorCode execute(PartitionID partId, const VertexID& vId) override {
         auto ret = RelNode::execute(partId, vId);
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             return ret;
         }
 
@@ -52,20 +52,20 @@ public:
         result_.setList(nebula::List());
         auto& result = result_.mutableList();
         if (planContext_->resultStat_ == ResultStatus::ILLEGAL_DATA) {
-            return nebula::cpp2::ErrorCode::E_INVALID_DATA;
+            return ErrorCode::E_STORAGE_QUERY_INVALID_DATA;
         }
 
         // add result of each tag node to tagResult
         for (auto* tagNode : tagNodes_) {
             ret = tagNode->collectTagPropsIfValid(
-                [&result] (const std::vector<PropContext>*) -> nebula::cpp2::ErrorCode {
+                [&result] (const std::vector<PropContext>*) -> ErrorCode {
                     result.values.emplace_back(Value());
-                    return nebula::cpp2::ErrorCode::SUCCEEDED;
+                    return ErrorCode::SUCCEEDED;
                 },
                 [this, &vId, &result, tagNode] (folly::StringPiece key,
                                                 RowReader* reader,
                                                 const std::vector<PropContext>* props)
-                -> nebula::cpp2::ErrorCode {
+                -> ErrorCode {
                     nebula::List list;
                     list.reserve(props->size());
                     const auto& tagName = tagNode->getTagName();
@@ -75,7 +75,7 @@ public:
                         auto value = QueryUtils::readVertexProp(
                             key, planContext_->vIdLen_, planContext_->isIntId_, reader, prop);
                         if (!value.ok()) {
-                            return nebula::cpp2::ErrorCode::E_TAG_PROP_NOT_FOUND;
+                            return ErrorCode::E_STORAGE_QUERY_READ_TAG_PROP_FAILD;
                         }
                         if (prop.filtered_ && expCtx_ != nullptr) {
                             expCtx_->setTagProp(tagName, prop.name_, value.value());
@@ -89,9 +89,9 @@ public:
                                                           reader->getData());
                     }
                     result.values.emplace_back(std::move(list));
-                    return nebula::cpp2::ErrorCode::SUCCEEDED;
+                    return ErrorCode::SUCCEEDED;
                 });
-            if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+            if (ret != ErrorCode::SUCCEEDED) {
                 return ret;
             }
         }
@@ -104,7 +104,7 @@ public:
         if (iter_->valid()) {
             setCurrentEdgeInfo();
         }
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
     bool valid() const override {

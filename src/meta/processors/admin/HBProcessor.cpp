@@ -10,8 +10,6 @@
 #include "meta/ActiveHostsMan.h"
 #include "meta/KVBasedClusterIdMan.h"
 
-DEFINE_bool(hosts_whitelist_enabled, false, "Check host whether in whitelist when received hb");
-
 namespace nebula {
 namespace meta {
 
@@ -29,19 +27,7 @@ void HBProcessor::onFinished() {
 
 void HBProcessor::process(const cpp2::HBReq& req) {
     HostAddr host((*req.host_ref()).host, (*req.host_ref()).port);
-    nebula::cpp2::ErrorCode ret;
-    if (FLAGS_hosts_whitelist_enabled) {
-        ret = hostExist(MetaServiceUtils::hostKey(host.host, host.port));
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
-            LOG(INFO) << "Reject unregistered host " << host << "!";
-            if (ret != nebula::cpp2::ErrorCode::E_LEADER_CHANGED) {
-                ret = nebula::cpp2::ErrorCode::E_INVALID_HOST;
-            }
-            handleErrorCode(ret);
-            onFinished();
-            return;
-       }
-    }
+    ErrorCode ret;
 
     VLOG(3) << "Receive heartbeat from " << host
             << ", role = " << apache::thrift::util::enumNameSafe(req.get_role());
@@ -52,7 +38,7 @@ void HBProcessor::process(const cpp2::HBReq& req) {
             resp_.set_cluster_id(clusterId_);
         } else if (peerCluserId != clusterId_) {
             LOG(ERROR) << "Reject wrong cluster host " << host << "!";
-            handleErrorCode(nebula::cpp2::ErrorCode::E_WRONGCLUSTER);
+            handleErrorCode(ErrorCode::E_META_ADMIN_WRONG_CLUSTER);
             onFinished();
             return;
         }
@@ -66,7 +52,7 @@ void HBProcessor::process(const cpp2::HBReq& req) {
     } else {
         ret = ActiveHostsMan::updateHostInfo(kvstore_, host, info);
     }
-    if (ret == nebula::cpp2::ErrorCode::E_LEADER_CHANGED) {
+    if (ret == ErrorCode::E_LEADER_CHANGED) {
         auto leaderRet = kvstore_->partLeader(kDefaultSpaceId, kDefaultPartId);
         if (nebula::ok(leaderRet)) {
             resp_.set_leader(toThriftHost(nebula::value(leaderRet)));
@@ -76,7 +62,7 @@ void HBProcessor::process(const cpp2::HBReq& req) {
     auto lastUpdateTimeRet = LastUpdateTimeMan::get(kvstore_);
     if (nebula::ok(lastUpdateTimeRet)) {
         resp_.set_last_update_time_in_ms(nebula::value(lastUpdateTimeRet));
-    } else if (nebula::error(lastUpdateTimeRet) == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
+    } else if (nebula::error(lastUpdateTimeRet) == ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND) {
         resp_.set_last_update_time_in_ms(0);
     }
     handleErrorCode(ret);

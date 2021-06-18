@@ -37,10 +37,10 @@ private:
     AddEdgesProcessor(StorageEnv* env, const ProcessorCounters* counters)
         : BaseProcessor<cpp2::ExecResponse>(env, counters) {}
 
-    ErrorOr<nebula::cpp2::ErrorCode, std::string>
+    ErrorOr<ErrorCode, std::string>
     addEdges(PartitionID partId, const std::vector<kvstore::KV>& edges);
 
-    ErrorOr<nebula::cpp2::ErrorCode, std::string>
+    ErrorOr<ErrorCode, std::string>
     findOldValue(PartitionID partId, const folly::StringPiece& rawKey);
 
     std::string indexKey(PartitionID partId,

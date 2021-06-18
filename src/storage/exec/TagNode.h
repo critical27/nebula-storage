@@ -40,10 +40,10 @@ public:
         tagName_ = tagContext_->tagNames_[tagId_];
     }
 
-    nebula::cpp2::ErrorCode execute(PartitionID partId, const VertexID& vId) override {
+    ErrorCode execute(PartitionID partId, const VertexID& vId) override {
         reader_.reset();
         auto ret = RelNode::execute(partId, vId);
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             return ret;
         }
         VLOG(1) << "partId " << partId << ", vId " << vId << ", tagId " << tagId_
@@ -57,7 +57,7 @@ public:
                 value_ = std::move(cache.value());
                 // if data in vertex cache is valid, don't read from kv
                 if (resetReader(vId)) {
-                    return nebula::cpp2::ErrorCode::SUCCEEDED;
+                    return ErrorCode::SUCCEEDED;
                 }
             }
         }
@@ -65,16 +65,16 @@ public:
         std::unique_ptr<kvstore::KVIterator> iter;
         auto prefix = NebulaKeyUtils::vertexPrefix(planContext_->vIdLen_, partId, vId, tagId_);
         ret = planContext_->env_->kvstore_->prefix(planContext_->spaceId_, partId, prefix, &iter);
-        if (ret == nebula::cpp2::ErrorCode::SUCCEEDED && iter && iter->valid()) {
+        if (ret == ErrorCode::SUCCEEDED && iter && iter->valid()) {
             key_ = iter->key().str();
             value_ = iter->val().str();
             resetReader(vId);
-            return nebula::cpp2::ErrorCode::SUCCEEDED;
+            return ErrorCode::SUCCEEDED;
         }
         return ret;
     }
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     collectTagPropsIfValid(NullHandler nullHandler,
                            PropHandler valueHandler) {
         if (!valid()) {

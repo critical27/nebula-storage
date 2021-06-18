@@ -24,13 +24,13 @@ void InterTxnProcessor::process(const cpp2::InternalTxnRequest& req) {
 
     env_->txnMan_->commitBatch(spaceId, partId, std::move(data))
         .via(env_->txnMan_->getExecutor())
-        .thenValue([=](nebula::cpp2::ErrorCode rc) {
+        .thenValue([=](ErrorCode rc) {
             LOG_IF(INFO, FLAGS_trace_toss) << "txnId="
                 << txnId << " commitBatch ret rc=" << static_cast<int32_t>(rc);
             auto code = rc;
-            if (code == nebula::cpp2::ErrorCode::E_LEADER_CHANGED) {
+            if (code == ErrorCode::E_LEADER_CHANGED) {
                 handleLeaderChanged(spaceId, partId);
-            } else if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+            } else if (code != ErrorCode::SUCCEEDED) {
                 pushResultCode(code, partId);
             }
             for (auto& p : codes_) {
@@ -47,7 +47,7 @@ void InterTxnProcessor::process(const cpp2::InternalTxnRequest& req) {
         })
         .thenError([&](auto&& ex) {
             LOG(ERROR) << "txnId=" << txnId << ", " << ex.what();
-            pushResultCode(nebula::cpp2::ErrorCode::E_UNKNOWN, partId);
+            pushResultCode(ErrorCode::E_UNKNOWN, partId);
             onFinished();
         });
 }

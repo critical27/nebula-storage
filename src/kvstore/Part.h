@@ -107,20 +107,18 @@ private:
                                                TermID committedLogTerm,
                                                bool finished) override;
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     putCommitMsg(WriteBatch* batch, LogID committedLogId, TermID committedLogTerm);
 
     void cleanup() override {
         LOG(INFO) << idStr_ << "Clean rocksdb commit key";
         auto res = engine_->remove(NebulaKeyUtils::systemCommitKey(partId_));
-        if (res != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (res != ErrorCode::SUCCEEDED) {
             LOG(WARNING) << idStr_ << "Remove the committedLogId failed, error "
                          << static_cast<int32_t>(res);
         }
         return;
     }
-
-    nebula::cpp2::ErrorCode toResultCode(raftex::AppendLogResult res);
 
 protected:
     GraphSpaceID spaceId_;

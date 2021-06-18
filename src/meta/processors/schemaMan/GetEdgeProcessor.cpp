@@ -41,7 +41,7 @@ void GetEdgeProcessor::process(const cpp2::GetEdgeReq& req) {
         if (!iter->valid()) {
             LOG(ERROR) << "Get Edge SpaceID: " << spaceId << ", edgeName: "
                        << edgeName << ", latest version " << " not found.";
-            handleErrorCode(nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND);
+            handleErrorCode(ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND);
             onFinished();
             return;
         }
@@ -61,7 +61,7 @@ void GetEdgeProcessor::process(const cpp2::GetEdgeReq& req) {
 
     VLOG(3) << "Get Edge SpaceID: " << spaceId << ", edgeName: "
             << edgeName << ", version " << ver;
-    handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
+    handleErrorCode(ErrorCode::SUCCEEDED);
     resp_.set_schema(MetaServiceUtils::parseSchema(schemaValue));
     onFinished();
 }

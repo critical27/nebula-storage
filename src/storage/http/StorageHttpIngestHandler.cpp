@@ -93,7 +93,7 @@ void StorageHttpIngestHandler::onError(ProxygenError error) noexcept {
 
 bool StorageHttpIngestHandler::ingestSSTFiles(GraphSpaceID space) {
     auto code = kvstore_->ingest(space);
-    if (code == nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (code == ErrorCode::SUCCEEDED) {
         return true;
     } else {
         LOG(ERROR) << "SSTFile Ingest Failed: "

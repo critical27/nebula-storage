@@ -26,23 +26,23 @@ public:
         LOG(INFO) << "Release Statis Task";
     }
 
-    ErrorOr<nebula::cpp2::ErrorCode, std::vector<AdminSubTask>> genSubTasks() override;
+    ErrorOr<ErrorCode, std::vector<AdminSubTask>> genSubTasks() override;
 
-    void finish(nebula::cpp2::ErrorCode rc) override;
+    void finish(ErrorCode rc) override;
 
 protected:
     void cancel() override {
         canceled_ = true;
     }
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     genSubTask(GraphSpaceID space,
                PartitionID part,
                std::unordered_map<TagID, std::string> tags,
                std::unordered_map<EdgeType, std::string> edges);
 
 private:
-    nebula::cpp2::ErrorCode getSchemas(GraphSpaceID spaceId);
+    ErrorCode getSchemas(GraphSpaceID spaceId);
 
 protected:
     std::atomic<bool>                           canceled_{false};

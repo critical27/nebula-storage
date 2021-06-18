@@ -18,10 +18,10 @@ void AdminTaskProcessor::process(const cpp2::AddAdminTaskRequest& req) {
 
     auto cb = [env = env_,
                jobId = req.get_job_id(), taskId = req.get_task_id()](
-                  nebula::cpp2::ErrorCode errCode,
+                  ErrorCode errCode,
                   nebula::meta::cpp2::StatisItem& result) {
         meta::cpp2::StatisItem* pStatis = nullptr;
-        if (errCode == nebula::cpp2::ErrorCode::SUCCEEDED &&
+        if (errCode == ErrorCode::SUCCEEDED &&
             *result.status_ref() == nebula::meta::cpp2::JobStatus::FINISHED) {
             pStatis = &result;
         }
@@ -33,7 +33,7 @@ void AdminTaskProcessor::process(const cpp2::AddAdminTaskRequest& req) {
         auto maxRetry = 5;
         auto retry = 0;
         while (retry++ < maxRetry) {
-            auto rc = nebula::cpp2::ErrorCode::SUCCEEDED;
+            auto rc = ErrorCode::SUCCEEDED;
             auto fut = env->metaClient_->reportTaskFinish(jobId, taskId, errCode, pStatis);
             fut.wait();
             if (!fut.hasValue()) {
@@ -56,8 +56,7 @@ void AdminTaskProcessor::process(const cpp2::AddAdminTaskRequest& req) {
                                         jobId,
                                         taskId,
                                         apache::thrift::util::enumNameSafe(rc));
-            if (rc == nebula::cpp2::ErrorCode::E_LEADER_CHANGED ||
-                rc == nebula::cpp2::ErrorCode::E_STORE_FAILURE) {
+            if (rc == ErrorCode::E_LEADER_CHANGED) {
                 continue;
             } else {
                 break;
@@ -71,7 +70,7 @@ void AdminTaskProcessor::process(const cpp2::AddAdminTaskRequest& req) {
         taskManager->addAsyncTask(task);
     } else {
         cpp2::PartitionResult thriftRet;
-        thriftRet.set_code(nebula::cpp2::ErrorCode::E_INVALID_TASK_PARA);
+        thriftRet.set_code(ErrorCode::E_STORAGE_TASK_INVALID_PARA);
         codes_.emplace_back(std::move(thriftRet));
     }
     onFinished();

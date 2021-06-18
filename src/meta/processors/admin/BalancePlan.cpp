@@ -121,7 +121,7 @@ void BalancePlan::invoke() {
     }
 }
 
-nebula::cpp2::ErrorCode BalancePlan::saveInStore(bool onlyPlan) {
+ErrorCode BalancePlan::saveInStore(bool onlyPlan) {
     CHECK_NOTNULL(kv_);
     std::vector<kvstore::KV> data;
     data.emplace_back(MetaServiceUtils::balancePlanKey(id_),
@@ -140,12 +140,12 @@ nebula::cpp2::ErrorCode BalancePlan::saveInStore(bool onlyPlan) {
         }
     }
     folly::Baton<true, std::atomic> baton;
-    auto ret = nebula::cpp2::ErrorCode::SUCCEEDED;
+    auto ret = ErrorCode::SUCCEEDED;
     kv_->asyncMultiPut(kDefaultSpaceId,
                        kDefaultPartId,
                        std::move(data),
-                       [&baton, &ret] (nebula::cpp2::ErrorCode code) {
-        if (nebula::cpp2::ErrorCode::SUCCEEDED != code) {
+                       [&baton, &ret] (ErrorCode code) {
+        if (ErrorCode::SUCCEEDED != code) {
             ret = code;
             LOG(ERROR) << "Can't write the kvstore, ret = " << static_cast<int32_t>(code);
         }
@@ -155,12 +155,12 @@ nebula::cpp2::ErrorCode BalancePlan::saveInStore(bool onlyPlan) {
     return ret;
 }
 
-nebula::cpp2::ErrorCode BalancePlan::recovery(bool resume) {
+ErrorCode BalancePlan::recovery(bool resume) {
     CHECK_NOTNULL(kv_);
     const auto& prefix = MetaServiceUtils::balanceTaskPrefix(id_);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = kv_->prefix(kDefaultSpaceId, kDefaultPartId, prefix, &iter);
-    if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (ret != ErrorCode::SUCCEEDED) {
         LOG(ERROR) << "Can't access kvstore, ret = " << static_cast<int32_t>(ret);
         return ret;
     }
@@ -208,7 +208,7 @@ nebula::cpp2::ErrorCode BalancePlan::recovery(bool resume) {
         tasks_.emplace_back(std::move(task));
         iter->next();
     }
-    return nebula::cpp2::ErrorCode::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 }  // namespace meta

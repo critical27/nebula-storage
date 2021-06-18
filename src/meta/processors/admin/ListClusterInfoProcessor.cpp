@@ -18,7 +18,7 @@ void ListClusterInfoProcessor::process(const cpp2::ListClusterInfoReq& req) {
     }
 
     if (!store->isLeader(kDefaultSpaceId, kDefaultPartId)) {
-        handleErrorCode(nebula::cpp2::ErrorCode::E_LEADER_CHANGED);
+        handleErrorCode(ErrorCode::E_LEADER_CHANGED);
         onFinished();
         return;
     }
@@ -26,9 +26,9 @@ void ListClusterInfoProcessor::process(const cpp2::ListClusterInfoReq& req) {
     const auto& prefix = MetaServiceUtils::hostPrefix();
     std::unique_ptr<kvstore::KVIterator> iter;
     auto ret = kvstore_->prefix(kDefaultSpaceId, kDefaultPartId, prefix, &iter, true);
-    if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (ret != ErrorCode::SUCCEEDED) {
         LOG(ERROR) << "prefix failed:" << apache::thrift::util::enumNameSafe(ret);
-        handleErrorCode(nebula::cpp2::ErrorCode::E_LIST_CLUSTER_FAILURE);
+        handleErrorCode(ErrorCode::E_META_BACKUP_HOST_NOT_FOUND);
         onFinished();
         return;
     }
@@ -46,7 +46,7 @@ void ListClusterInfoProcessor::process(const cpp2::ListClusterInfoReq& req) {
         auto status = client_->listClusterInfo(host).get();
         if (!status.ok()) {
             LOG(ERROR) << "listcluster info from storage failed, host: " << host;
-            handleErrorCode(nebula::cpp2::ErrorCode::E_LIST_CLUSTER_FAILURE);
+            handleErrorCode(ErrorCode::E_META_BACKUP_GET_HOST_INFO_FAILED);
             onFinished();
             return;
         }
@@ -59,7 +59,7 @@ void ListClusterInfoProcessor::process(const cpp2::ListClusterInfoReq& req) {
     auto* pm = store->partManager();
     auto* mpm = dynamic_cast<nebula::kvstore::MemPartManager*>(pm);
     if (mpm == nullptr) {
-        resp_.set_code(nebula::cpp2::ErrorCode::E_LIST_CLUSTER_FAILURE);
+        resp_.set_code(ErrorCode::E_META_BACKUP_GET_PART_MAN_FAILED);
         onFinished();
         return;
     }
@@ -68,7 +68,7 @@ void ListClusterInfoProcessor::process(const cpp2::ListClusterInfoReq& req) {
     LOG(INFO) << "meta servers count: " << hosts.size();
     resp_.set_meta_servers(std::move(hosts));
 
-    resp_.set_code(nebula::cpp2::ErrorCode::SUCCEEDED);
+    resp_.set_code(ErrorCode::SUCCEEDED);
     resp_.set_storage_servers(std::move(storages));
     onFinished();
 }

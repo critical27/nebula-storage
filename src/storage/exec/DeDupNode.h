@@ -24,13 +24,13 @@ public:
         : resultSet_(resultSet)
         , pos_(pos) {}
 
-    nebula::cpp2::ErrorCode execute(PartitionID partId) override {
+    ErrorCode execute(PartitionID partId) override {
         auto ret = RelNode<T>::execute(partId);
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             return ret;
         }
         dedup(resultSet_->rows);
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
 private:

@@ -83,7 +83,7 @@ const std::string kSessionsTable = systemTableMaps.at("sessions").first;        
 const int kMaxIpAddrLen = 15;   // '255.255.255.255'
 
 namespace {
-nebula::cpp2::ErrorCode backupTable(kvstore::KVStore* kvstore,
+ErrorCode backupTable(kvstore::KVStore* kvstore,
                                 const std::string& backupName,
                                 const std::string& tableName,
                                 std::vector<std::string>& files,
@@ -91,8 +91,8 @@ nebula::cpp2::ErrorCode backupTable(kvstore::KVStore* kvstore,
     auto backupFilePath = kvstore->backupTable(kDefaultSpaceId, backupName, tableName, filter);
     if (!ok(backupFilePath)) {
         auto result = error(backupFilePath);
-        if (result == nebula::cpp2::ErrorCode::E_BACKUP_EMPTY_TABLE) {
-            return nebula::cpp2::ErrorCode::SUCCEEDED;
+        if (result == ErrorCode::E_STORAGE_BACKUP_EMPTY_TABLE) {
+            return ErrorCode::SUCCEEDED;
         }
         return result;
     }
@@ -100,7 +100,7 @@ nebula::cpp2::ErrorCode backupTable(kvstore::KVStore* kvstore,
     files.insert(files.end(),
                  std::make_move_iterator(value(backupFilePath).begin()),
                  std::make_move_iterator(value(backupFilePath).end()));
-    return nebula::cpp2::ErrorCode::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 }   // namespace
 
@@ -333,13 +333,13 @@ std::string MetaServiceUtils::leaderValV3(const HostAddr& h, int64_t term) {
 }
 
 // v3: dataVer(int) + lenOfHost(8) + HostAddr(varchar) + term(int64_t)
-std::tuple<HostAddr, TermID, nebula::cpp2::ErrorCode>
+std::tuple<HostAddr, TermID, ErrorCode>
 MetaServiceUtils::parseLeaderValV3(folly::StringPiece val) {
-    std::tuple<HostAddr, TermID, nebula::cpp2::ErrorCode> ret;
-    std::get<2>(ret) = nebula::cpp2::ErrorCode::SUCCEEDED;
+    std::tuple<HostAddr, TermID, ErrorCode> ret;
+    std::get<2>(ret) = ErrorCode::SUCCEEDED;
     int dataVer = *reinterpret_cast<const int*>(val.data());
     if (dataVer != 3) {
-        std::get<2>(ret) = nebula::cpp2::ErrorCode::E_INVALID_PARM;
+        std::get<2>(ret) = ErrorCode::E_META_LEADER_INVALID_VERSION;
         return ret;
     }
 
@@ -676,7 +676,7 @@ std::string MetaServiceUtils::assembleSegmentKey(const std::string& segment,
     return segmentKey;
 }
 
-nebula::cpp2::ErrorCode
+ErrorCode
 MetaServiceUtils::alterColumnDefs(std::vector<cpp2::ColumnDef>& cols,
                                   cpp2::SchemaProp& prop,
                                   const cpp2::ColumnDef col,
@@ -687,11 +687,11 @@ MetaServiceUtils::alterColumnDefs(std::vector<cpp2::ColumnDef>& cols,
             for (auto it = cols.begin(); it != cols.end(); ++it) {
                 if (it->get_name() == col.get_name()) {
                     LOG(ERROR) << "Column existing: " << col.get_name();
-                    return nebula::cpp2::ErrorCode::E_EXISTED;
+                    return ErrorCode::E_META_SCHEMA_PROPERTY_EXISTED;
                 }
             }
             cols.emplace_back(std::move(col));
-            return nebula::cpp2::ErrorCode::SUCCEEDED;
+            return ErrorCode::SUCCEEDED;
         case cpp2::AlterSchemaOp::CHANGE:
             for (auto it = cols.begin(); it != cols.end(); ++it) {
                 auto colName = col.get_name();
@@ -699,17 +699,17 @@ MetaServiceUtils::alterColumnDefs(std::vector<cpp2::ColumnDef>& cols,
                     // If this col is ttl_col, change not allowed
                     if (prop.get_ttl_col() && (*prop.get_ttl_col() == colName)) {
                         LOG(ERROR) << "Column: " << colName << " as ttl_col, change not allowed";
-                        return nebula::cpp2::ErrorCode::E_UNSUPPORTED;
+                        return ErrorCode::E_META_SCHEMA_CHANGE_FORBIDDEN_WHEN_HAS_TTL;
                     }
                     *it = col;
-                    return nebula::cpp2::ErrorCode::SUCCEEDED;
+                    return ErrorCode::SUCCEEDED;
                 }
             }
             LOG(ERROR) << "Column not found: " << col.get_name();
             if (isEdge) {
-                return nebula::cpp2::ErrorCode::E_EDGE_PROP_NOT_FOUND;
+                return ErrorCode::E_STORAGE_SCHEMA_EDGE_PROP_NOT_FOUND;
             }
-            return nebula::cpp2::ErrorCode::E_TAG_PROP_NOT_FOUND;
+            return ErrorCode::E_STORAGE_SCHEMA_TAG_PROP_NOT_FOUND;
         case cpp2::AlterSchemaOp::DROP:
             for (auto it = cols.begin(); it != cols.end(); ++it) {
                 auto colName = col.get_name();
@@ -719,21 +719,21 @@ MetaServiceUtils::alterColumnDefs(std::vector<cpp2::ColumnDef>& cols,
                         prop.set_ttl_col("");
                     }
                     cols.erase(it);
-                    return nebula::cpp2::ErrorCode::SUCCEEDED;
+                    return ErrorCode::SUCCEEDED;
                 }
             }
             LOG(ERROR) << "Column not found: " << col.get_name();
             if (isEdge) {
-                return nebula::cpp2::ErrorCode::E_EDGE_PROP_NOT_FOUND;
+                return ErrorCode::E_STORAGE_SCHEMA_EDGE_PROP_NOT_FOUND;
             }
-            return nebula::cpp2::ErrorCode::E_TAG_PROP_NOT_FOUND;
+            return ErrorCode::E_STORAGE_SCHEMA_TAG_PROP_NOT_FOUND;
         default:
             LOG(ERROR) << "Alter schema operator not supported";
-            return nebula::cpp2::ErrorCode::E_UNSUPPORTED;
+            return ErrorCode::E_UNSUPPORTED;
     }
 }
 
-nebula::cpp2::ErrorCode
+ErrorCode
 MetaServiceUtils::alterSchemaProp(std::vector<cpp2::ColumnDef>& cols,
                                   cpp2::SchemaProp& schemaProp,
                                   cpp2::SchemaProp alterSchemaProp,
@@ -742,7 +742,7 @@ MetaServiceUtils::alterSchemaProp(std::vector<cpp2::ColumnDef>& cols,
     if (existIndex && (alterSchemaProp.ttl_duration_ref().has_value() ||
                 alterSchemaProp.ttl_col_ref().has_value())) {
         LOG(ERROR) << "Has index, can't change ttl";
-        return nebula::cpp2::ErrorCode::E_UNSUPPORTED;
+        return ErrorCode::E_META_SCHEMA_CHANGE_FORBIDDEN_WHEN_HAS_TTL;
     }
     if (alterSchemaProp.ttl_duration_ref().has_value()) {
         // Graph check  <=0 to = 0
@@ -754,7 +754,7 @@ MetaServiceUtils::alterSchemaProp(std::vector<cpp2::ColumnDef>& cols,
         if (ttlCol.empty()) {
             schemaProp.set_ttl_duration(0);
             schemaProp.set_ttl_col(ttlCol);
-            return nebula::cpp2::ErrorCode::SUCCEEDED;
+            return ErrorCode::SUCCEEDED;
         }
 
         auto existed = false;
@@ -765,7 +765,7 @@ MetaServiceUtils::alterSchemaProp(std::vector<cpp2::ColumnDef>& cols,
                 if (colType != cpp2::PropertyType::INT64 &&
                     colType != cpp2::PropertyType::TIMESTAMP) {
                     LOG(ERROR) << "TTL column type illegal";
-                    return nebula::cpp2::ErrorCode::E_UNSUPPORTED;
+                    return ErrorCode::E_META_SCHEMA_INVALID_TTL_COLUMN_TYPE;
                 }
                 existed = true;
                 schemaProp.set_ttl_col(ttlCol);
@@ -776,9 +776,9 @@ MetaServiceUtils::alterSchemaProp(std::vector<cpp2::ColumnDef>& cols,
         if (!existed) {
             LOG(ERROR) << "TTL column not found: " << ttlCol;
             if (isEdge) {
-                return nebula::cpp2::ErrorCode::E_EDGE_PROP_NOT_FOUND;
+                return ErrorCode::E_STORAGE_SCHEMA_EDGE_PROP_NOT_FOUND;
             }
-            return nebula::cpp2::ErrorCode::E_TAG_PROP_NOT_FOUND;
+            return ErrorCode::E_STORAGE_SCHEMA_TAG_PROP_NOT_FOUND;
         }
     }
 
@@ -787,14 +787,14 @@ MetaServiceUtils::alterSchemaProp(std::vector<cpp2::ColumnDef>& cols,
         (!schemaProp.get_ttl_col() ||
          (schemaProp.get_ttl_col() && schemaProp.get_ttl_col()->empty()))) {
         LOG(WARNING) << "Implicit ttl_col not support";
-        return nebula::cpp2::ErrorCode::E_UNSUPPORTED;
+        return ErrorCode::E_META_SCHEMA_INVALID_TTL_COLUMN;
     }
 
     if (alterSchemaProp.comment_ref().has_value()) {
         schemaProp.set_comment(*alterSchemaProp.comment_ref());
     }
 
-    return nebula::cpp2::ErrorCode::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 std::string MetaServiceUtils::userPrefix() {
@@ -1027,7 +1027,7 @@ MetaServiceUtils::spaceFilter(const std::unordered_set<GraphSpaceID>& spaces,
     return sf;
 }
 
-ErrorOr<nebula::cpp2::ErrorCode, std::vector<std::string>> MetaServiceUtils::backupIndex(
+ErrorOr<ErrorCode, std::vector<std::string>> MetaServiceUtils::backupIndex(
     kvstore::KVStore* kvstore,
     const std::unordered_set<GraphSpaceID>& spaces,
     const std::string& backupName,
@@ -1070,7 +1070,7 @@ ErrorOr<nebula::cpp2::ErrorCode, std::vector<std::string>> MetaServiceUtils::bac
         });
 }
 
-ErrorOr<nebula::cpp2::ErrorCode, std::vector<std::string>> MetaServiceUtils::backupSpaces(
+ErrorOr<ErrorCode, std::vector<std::string>> MetaServiceUtils::backupSpaces(
     kvstore::KVStore* kvstore,
     const std::unordered_set<GraphSpaceID>& spaces,
     const std::string& backupName,
@@ -1088,7 +1088,7 @@ ErrorOr<nebula::cpp2::ErrorCode, std::vector<std::string>> MetaServiceUtils::bac
                                   table.second.first,
                                   files,
                                   spaceFilter(spaces, table.second.second));
-        if (result != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (result != ErrorCode::SUCCEEDED) {
             return result;
         }
         LOG(INFO) << table.first << " table backup successed";
@@ -1101,7 +1101,7 @@ ErrorOr<nebula::cpp2::ErrorCode, std::vector<std::string>> MetaServiceUtils::bac
                 continue;
             }
             auto result = backupTable(kvstore, backupName, table.second.first, files, nullptr);
-            if (result != nebula::cpp2::ErrorCode::SUCCEEDED) {
+            if (result != ErrorCode::SUCCEEDED) {
                 return result;
             }
             LOG(INFO) << table.first << " table backup successed";
@@ -1112,7 +1112,7 @@ ErrorOr<nebula::cpp2::ErrorCode, std::vector<std::string>> MetaServiceUtils::bac
     auto ret = backupIndex(kvstore, spaces, backupName, spaceNames);
     if (!ok(ret)) {
         auto result = error(ret);
-        if (result == nebula::cpp2::ErrorCode::E_BACKUP_EMPTY_TABLE) {
+        if (result == ErrorCode::E_STORAGE_BACKUP_EMPTY_TABLE) {
             return files;
         }
         return result;

@@ -23,12 +23,12 @@ void CreateTagProcessor::process(const cpp2::CreateTagReq& req) {
             LOG(ERROR) << "Failed to create tag `" << tagName
                        << "': some edge with the same name already exists.";
             resp_.set_id(to(nebula::value(conflictRet), EntryType::TAG));
-            handleErrorCode(nebula::cpp2::ErrorCode::E_CONFLICT);
+            handleErrorCode(ErrorCode::E_META_SCHEMA_NAME_CONFLICT);
             onFinished();
             return;
         } else {
             auto retCode = nebula::error(conflictRet);
-            if (retCode != nebula::cpp2::ErrorCode::E_EDGE_NOT_FOUND) {
+            if (retCode != ErrorCode::E_META_SCHEMA_EDGE_NOT_FOUND) {
                 LOG(ERROR) << "Failed to create tag " << tagName << " error "
                            << apache::thrift::util::enumNameSafe(retCode);
                 handleErrorCode(retCode);
@@ -40,7 +40,7 @@ void CreateTagProcessor::process(const cpp2::CreateTagReq& req) {
 
     auto columns = req.get_schema().get_columns();
     if (!SchemaUtil::checkType(columns)) {
-        handleErrorCode(nebula::cpp2::ErrorCode::E_INVALID_PARM);
+        handleErrorCode(ErrorCode::E_META_SCHEMA_INVALID_DEFAULT_VALUE);
         onFinished();
         return;
     }
@@ -53,17 +53,17 @@ void CreateTagProcessor::process(const cpp2::CreateTagReq& req) {
     auto ret = getTagId(spaceId, tagName);
     if (nebula::ok(ret)) {
         if (req.get_if_not_exists()) {
-            handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
+            handleErrorCode(ErrorCode::SUCCEEDED);
         } else {
             LOG(ERROR) << "Create Tag Failed :" << tagName << " has existed";
-            handleErrorCode(nebula::cpp2::ErrorCode::E_EXISTED);
+            handleErrorCode(ErrorCode::E_META_SCHEMA_TAG_EXISTED);
         }
         resp_.set_id(to(nebula::value(ret), EntryType::TAG));
         onFinished();
         return;
     } else {
         auto retCode = nebula::error(ret);
-        if (retCode != nebula::cpp2::ErrorCode::E_TAG_NOT_FOUND) {
+        if (retCode != ErrorCode::E_META_SCHEMA_TAG_NOT_FOUND) {
             LOG(ERROR) << "Failed to create tag " << tagName << " error "
                        << apache::thrift::util::enumNameSafe(retCode);
             handleErrorCode(retCode);

@@ -54,14 +54,14 @@ void StorageHttpAdminHandler::onRequest(std::unique_ptr<HTTPMessage> headers) no
     if (*op == "compact") {
         LOG(INFO) << "do compact at space=" << *space;
         auto status = kv_->compact(spaceId);
-        if (status != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (status != ErrorCode::SUCCEEDED) {
             resp_ = folly::stringPrintf("Compact failed! error=%d", static_cast<int32_t>(status));
             err_ = HttpCode::SUCCEEDED;
             return;
         }
     } else if (*op == "flush") {
         auto status = kv_->flush(spaceId);
-        if (status != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (status != ErrorCode::SUCCEEDED) {
             resp_ = folly::stringPrintf("Flush failed! error=%d", static_cast<int32_t>(status));
             err_ = HttpCode::SUCCEEDED;
             return;

@@ -81,9 +81,9 @@ public:
         }
     }
 
-    nebula::cpp2::ErrorCode execute(PartitionID partId) override {
+    ErrorCode execute(PartitionID partId) override {
         auto ret = RelNode<T>::execute(partId);
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             return ret;
         }
 
@@ -125,8 +125,8 @@ public:
     }
 
 private:
-    nebula::cpp2::ErrorCode collectResult(const std::vector<kvstore::KV>& data) {
-        auto ret = nebula::cpp2::ErrorCode::SUCCEEDED;
+    ErrorCode collectResult(const std::vector<kvstore::KV>& data) {
+        auto ret = ErrorCode::SUCCEEDED;
         switch (type_) {
             case IndexResultType::kEdgeFromIndexScan:
             case IndexResultType::kEdgeFromIndexFilter: {
@@ -152,82 +152,82 @@ private:
         return ret;
     }
 
-    nebula::cpp2::ErrorCode vertexRowsFromData(const std::vector<kvstore::KV>& data) {
+    ErrorCode vertexRowsFromData(const std::vector<kvstore::KV>& data) {
         const auto& schemas = type_ == IndexResultType::kVertexFromDataScan
                               ? indexVertexNode_->getSchemas()
                               : indexFilterNode_->getSchemas();
         if (schemas.empty()) {
-            return nebula::cpp2::ErrorCode::E_TAG_NOT_FOUND;
+            return ErrorCode::E_STORAGE_SCHEMA_TAG_NOT_FOUND;
         }
         for (const auto& val : data) {
             Row row;
             auto reader = RowReaderWrapper::getRowReader(schemas, val.second);
             if (!reader) {
                 VLOG(1) << "Can't get tag reader";
-                return nebula::cpp2::ErrorCode::E_TAG_NOT_FOUND;
+                return ErrorCode::E_STORAGE_SCHEMA_TAG_NOT_FOUND;
             }
             for (const auto& col : result_->colNames) {
                 auto ret = addIndexValue(row, reader.get(), val, col, schemas.back().get());
                 if (!ret.ok()) {
-                    return nebula::cpp2::ErrorCode::E_INVALID_DATA;
+                    return ErrorCode::E_STORAGE_QUERY_INVALID_DATA;
                 }
             }
             result_->rows.emplace_back(std::move(row));
         }
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
-    nebula::cpp2::ErrorCode vertexRowsFromIndex(const std::vector<kvstore::KV>& data) {
+    ErrorCode vertexRowsFromIndex(const std::vector<kvstore::KV>& data) {
         for (const auto& val : data) {
             Row row;
             for (const auto& col : result_->colNames) {
                 auto ret = addIndexValue(row, val, col);
                 if (!ret.ok()) {
-                    return nebula::cpp2::ErrorCode::E_INVALID_DATA;
+                    return ErrorCode::E_STORAGE_QUERY_INVALID_DATA;
                 }
             }
             result_->rows.emplace_back(std::move(row));
         }
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
-    nebula::cpp2::ErrorCode edgeRowsFromData(const std::vector<kvstore::KV>& data) {
+    ErrorCode edgeRowsFromData(const std::vector<kvstore::KV>& data) {
         const auto& schemas = type_ == IndexResultType::kEdgeFromDataScan
                               ? indexEdgeNode_->getSchemas()
                               : indexFilterNode_->getSchemas();
         if (schemas.empty()) {
-            return nebula::cpp2::ErrorCode::E_EDGE_NOT_FOUND;
+            return ErrorCode::E_STORAGE_SCHEMA_EDGE_NOT_FOUND;
         }
         for (const auto& val : data) {
             Row row;
             auto reader = RowReaderWrapper::getRowReader(schemas, val.second);
             if (!reader) {
                 VLOG(1) << "Can't get tag reader";
-                return nebula::cpp2::ErrorCode::E_EDGE_NOT_FOUND;
+                return ErrorCode::E_STORAGE_SCHEMA_EDGE_NOT_FOUND;
             }
             for (const auto& col : result_->colNames) {
                 auto ret = addIndexValue(row, reader.get(), val, col, schemas.back().get());
                 if (!ret.ok()) {
-                    return nebula::cpp2::ErrorCode::E_INVALID_DATA;
+                    return ErrorCode::E_STORAGE_QUERY_INVALID_DATA;
                 }
             }
             result_->rows.emplace_back(std::move(row));
         }
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
-    nebula::cpp2::ErrorCode edgeRowsFromIndex(const std::vector<kvstore::KV>& data) {
+    ErrorCode edgeRowsFromIndex(const std::vector<kvstore::KV>& data) {
         for (const auto& val : data) {
             Row row;
             for (const auto& col : result_->colNames) {
                 auto ret = addIndexValue(row, val, col);
                 if (!ret.ok()) {
-                    return nebula::cpp2::ErrorCode::E_INVALID_DATA;
+                    return ErrorCode::E_STORAGE_QUERY_INVALID_DATA;
                 }
             }
             result_->rows.emplace_back(std::move(row));
         }
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
     // Add the value by data val

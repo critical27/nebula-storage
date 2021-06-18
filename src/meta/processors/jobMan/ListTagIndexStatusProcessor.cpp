@@ -14,7 +14,7 @@ void ListTagIndexStatusProcessor::process(const cpp2::ListIndexStatusReq& req) {
     CHECK_SPACE_ID_AND_RETURN(curSpaceId);
     std::unique_ptr<kvstore::KVIterator> iter;
     auto retCode = kvstore_->prefix(kDefaultSpaceId, kDefaultPartId, JobUtil::jobPrefix(), &iter);
-    if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (retCode != ErrorCode::SUCCEEDED) {
         LOG(ERROR) << "Loading Job Failed" << apache::thrift::util::enumNameSafe(retCode);
         handleErrorCode(retCode);
         onFinished();
@@ -39,7 +39,7 @@ void ListTagIndexStatusProcessor::process(const cpp2::ListIndexStatusReq& req) {
                 auto ret = getSpaceId(spaceName);
                 if (!nebula::ok(ret)) {
                     retCode = nebula::error(ret);
-                    if (retCode == nebula::cpp2::ErrorCode::E_LEADER_CHANGED) {
+                    if (retCode == ErrorCode::E_LEADER_CHANGED) {
                         handleErrorCode(retCode);
                         onFinished();
                         return;
@@ -75,7 +75,7 @@ void ListTagIndexStatusProcessor::process(const cpp2::ListIndexStatusReq& req) {
         statuses.emplace_back(std::move(status));
     }
     resp_.set_statuses(std::move(statuses));
-    handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
+    handleErrorCode(ErrorCode::SUCCEEDED);
     onFinished();
 }
 

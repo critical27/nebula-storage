@@ -39,7 +39,7 @@ private:
                                                      executor) {
     }
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     checkAndBuildContexts(const cpp2::ScanEdgeRequest& req) override;
 
     void buildEdgeColName(const std::vector<cpp2::EdgeProp>& edgeProps);

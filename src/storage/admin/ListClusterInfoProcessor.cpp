@@ -36,7 +36,7 @@ void ListClusterInfoProcessor::process(const cpp2::ListClusterInfoReq& req) {
                    });
     if (failed) {
         cpp2::PartitionResult thriftRet;
-        thriftRet.set_code(nebula::cpp2::ErrorCode::E_FAILED_GET_ABS_PATH);
+        thriftRet.set_code(ErrorCode::E_STORAGE_BACKUP_READ_PATH_FAILED);
         codes_.emplace_back(std::move(thriftRet));
         onFinished();
         return;

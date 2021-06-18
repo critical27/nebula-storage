@@ -35,7 +35,7 @@ void ListEdgeIndexesProcessor::process(const cpp2::ListEdgeIndexesReq& req) {
         }
         iter->next();
     }
-    handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
+    handleErrorCode(ErrorCode::SUCCEEDED);
     resp_.set_items(std::move(items));
     onFinished();
 }

@@ -1023,7 +1023,7 @@ TEST(GetNeighborsTest, FailedTest) {
         auto resp = std::move(fut).get();
 
         ASSERT_EQ(1, (*resp.result_ref()).failed_parts.size());
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_TAG_NOT_FOUND,
+        ASSERT_EQ(ErrorCode::E_STORAGE_SCHEMA_TAG_NOT_FOUND,
                   (*resp.result_ref()).failed_parts.front().code);
     }
     {
@@ -1041,7 +1041,7 @@ TEST(GetNeighborsTest, FailedTest) {
         auto resp = std::move(fut).get();
 
         ASSERT_EQ(1, (*resp.result_ref()).failed_parts.size());
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_EDGE_NOT_FOUND,
+        ASSERT_EQ(ErrorCode::E_STORAGE_SCHEMA_EDGE_NOT_FOUND,
                 (*resp.result_ref()).failed_parts.front().code);
     }
     {
@@ -1059,7 +1059,7 @@ TEST(GetNeighborsTest, FailedTest) {
         auto resp = std::move(fut).get();
 
         ASSERT_EQ(1, (*resp.result_ref()).failed_parts.size());
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_TAG_PROP_NOT_FOUND,
+        ASSERT_EQ(ErrorCode::E_STORAGE_SCHEMA_TAG_PROP_NOT_FOUND,
                 (*resp.result_ref()).failed_parts.front().code);
     }
     {
@@ -1077,7 +1077,7 @@ TEST(GetNeighborsTest, FailedTest) {
         auto resp = std::move(fut).get();
 
         ASSERT_EQ(1, (*resp.result_ref()).failed_parts.size());
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_EDGE_PROP_NOT_FOUND,
+        ASSERT_EQ(ErrorCode::E_STORAGE_SCHEMA_EDGE_PROP_NOT_FOUND,
                 (*resp.result_ref()).failed_parts.front().code);
     }
 }

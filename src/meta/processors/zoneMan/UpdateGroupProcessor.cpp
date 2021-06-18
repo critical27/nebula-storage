@@ -26,8 +26,8 @@ void AddZoneIntoGroupProcessor::process(const cpp2::AddZoneIntoGroupReq& req) {
     auto groupValueRet = doGet(std::move(groupKey));
     if (!nebula::ok(groupValueRet)) {
         auto retCode = nebula::error(groupValueRet);
-        if (retCode == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
-            retCode = nebula::cpp2::ErrorCode::E_GROUP_NOT_FOUND;
+        if (retCode == ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND) {
+            retCode = ErrorCode::E_GROUP_NOT_FOUND;
         }
         LOG(ERROR) << "Get group " << groupName << " failed, error "
                    << apache::thrift::util::enumNameSafe(retCode);
@@ -41,7 +41,7 @@ void AddZoneIntoGroupProcessor::process(const cpp2::AddZoneIntoGroupReq& req) {
     auto iter = std::find(zoneNames.begin(), zoneNames.end(), zoneName);
     if (iter != zoneNames.end()) {
         LOG(ERROR) << "Zone " << zoneName << " already exist in the group " << groupName;
-        handleErrorCode(nebula::cpp2::ErrorCode::E_EXISTED);
+        handleErrorCode(ErrorCode::E_META_ZONE_EXISTED);
         onFinished();
         return;
     }
@@ -69,7 +69,7 @@ void AddZoneIntoGroupProcessor::process(const cpp2::AddZoneIntoGroupReq& req) {
 
     if (!found) {
         LOG(ERROR) << "Zone " << zoneName << " not found";
-        handleErrorCode(nebula::cpp2::ErrorCode::E_ZONE_NOT_FOUND);
+        handleErrorCode(ErrorCode::E_META_ZONE_NOT_FOUND);
         onFinished();
         return;
     }
@@ -98,8 +98,8 @@ void DropZoneFromGroupProcessor::process(const cpp2::DropZoneFromGroupReq& req) 
     auto groupValueRet = doGet(groupKey);
     if (!nebula::ok(groupValueRet)) {
         auto retCode = nebula::error(groupValueRet);
-        if (retCode == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
-            retCode = nebula::cpp2::ErrorCode::E_GROUP_NOT_FOUND;
+        if (retCode == ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND) {
+            retCode = ErrorCode::E_GROUP_NOT_FOUND;
         }
         LOG(ERROR) << "Get group " << groupName << " failed, error: "
                    << apache::thrift::util::enumNameSafe(retCode);
@@ -113,7 +113,7 @@ void DropZoneFromGroupProcessor::process(const cpp2::DropZoneFromGroupReq& req) 
     auto iter = std::find(zoneNames.begin(), zoneNames.end(), zoneName);
     if (iter == zoneNames.end()) {
         LOG(ERROR) << "Zone " << zoneName << " not exist in the group " << groupName;
-        handleErrorCode(nebula::cpp2::ErrorCode::E_ZONE_NOT_FOUND);
+        handleErrorCode(ErrorCode::E_META_ZONE_NOT_FOUND);
         onFinished();
         return;
     }

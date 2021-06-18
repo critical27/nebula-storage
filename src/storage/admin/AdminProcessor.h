@@ -50,7 +50,7 @@ public:
         auto status = partManager->partMeta(spaceId, partId);
         if (!status.ok()) {
             LOG(ERROR) << "Space: " << spaceId << " Part: " << partId << " not found";
-            this->pushResultCode(nebula::cpp2::ErrorCode::E_PART_NOT_FOUND, partId);
+            this->pushResultCode(ErrorCode::E_STORAGE_PART_NOT_FOUND, partId);
             onFinished();
             return;
         }
@@ -63,13 +63,13 @@ public:
         }
 
         part->asyncTransferLeader(host,
-                                  [this, spaceId, partId, part] (nebula::cpp2::ErrorCode code) {
-            if (code == nebula::cpp2::ErrorCode::E_LEADER_CHANGED) {
+                                  [this, spaceId, partId, part] (ErrorCode code) {
+            if (code == ErrorCode::E_LEADER_CHANGED) {
                 LOG(INFO) << "I am not the leader of space " << spaceId << " part " << partId;
                 handleLeaderChanged(spaceId, partId);
                 onFinished();
                 return;
-            } else if (code == nebula::cpp2::ErrorCode::SUCCEEDED) {
+            } else if (code == ErrorCode::SUCCEEDED) {
                 // To avoid dead lock, we use another ioThreadPool to check the leader information.
                 folly::via(folly::getIOExecutor().get(), [this, part, spaceId, partId] {
                     int retry = FLAGS_waiting_new_leader_retry_times;
@@ -93,7 +93,7 @@ public:
                         } else if (leader != HostAddr("", 0)) {
                             LOG(INFO) << "I am choosen as leader of space " << spaceId
                                       << " part " << partId << " again!";
-                            pushResultCode(nebula::cpp2::ErrorCode::E_TRANSFER_LEADER_FAILED,
+                            pushResultCode(ErrorCode::E_STORAGE_ADMIN_TRANSFER_LEADER_FAILED,
                                            partId);
                             onFinished();
                             return;
@@ -102,7 +102,7 @@ public:
                                   << " part " << partId << " on " << store->address();
                         sleep(FLAGS_waiting_new_leader_interval_in_secs);
                     }
-                    pushResultCode(nebula::cpp2::ErrorCode::E_RETRY_EXHAUSTED, partId);
+                    pushResultCode(ErrorCode::E_STORAGE_ADMIN_RETRY_EXHAUSTED, partId);
                     onFinished();
                 });
             } else {
@@ -130,7 +130,7 @@ public:
         auto spaceId = req.get_space_id();
         auto partId = req.get_part_id();
         if (FLAGS_store_type != "nebula") {
-            this->pushResultCode(nebula::cpp2::ErrorCode::E_INVALID_STORE, partId);
+            this->pushResultCode(ErrorCode::E_STORAGE_ADMIN_INVALID_STORAGE_ENGINE, partId);
             onFinished();
             return;
         }
@@ -139,7 +139,7 @@ public:
                   << req.get_space_id() << ", part " << partId;
         auto* store = static_cast<kvstore::NebulaStore*>(env_->kvstore_);
         auto ret = store->space(spaceId);
-        if (!nebula::ok(ret) && nebula::error(ret) == nebula::cpp2::ErrorCode::E_SPACE_NOT_FOUND) {
+        if (!nebula::ok(ret) && nebula::error(ret) == ErrorCode::E_STORAGE_SPACE_NOT_FOUND) {
             LOG(INFO) << "Space " << spaceId << " not exist, create it!";
             store->addSpace(spaceId);
         }
@@ -166,7 +166,7 @@ public:
         auto spaceId = req.get_space_id();
         auto partId = req.get_part_id();
         if (FLAGS_store_type != "nebula") {
-            this->pushResultCode(nebula::cpp2::ErrorCode::E_INVALID_STORE, partId);
+            this->pushResultCode(ErrorCode::E_STORAGE_ADMIN_INVALID_STORAGE_ENGINE, partId);
             onFinished();
             return;
         }
@@ -202,7 +202,7 @@ public:
         }
         auto part = nebula::value(ret);
         auto peer = kvstore::NebulaStore::getRaftAddr(req.get_peer());
-        auto cb = [this, spaceId, partId] (nebula::cpp2::ErrorCode code) {
+        auto cb = [this, spaceId, partId] (ErrorCode code) {
             handleErrorCode(code, spaceId, partId);
             onFinished();
             return;
@@ -241,7 +241,7 @@ public:
         }
         auto part = nebula::value(ret);
         auto learner = kvstore::NebulaStore::getRaftAddr(req.get_learner());
-        part->asyncAddLearner(learner, [this, spaceId, partId] (nebula::cpp2::ErrorCode code) {
+        part->asyncAddLearner(learner, [this, spaceId, partId] (ErrorCode code) {
             handleErrorCode(code, spaceId, partId);
             onFinished();
             return;
@@ -285,19 +285,19 @@ public:
                           << ", remaining " << retry << " retry times"
                           << ", result " << static_cast<int32_t>(res);
                 switch (res) {
-                    case raftex::AppendLogResult::SUCCEEDED:
+                    case raftex::ErrorCode::SUCCEEDED:
                         onFinished();
                         return;
-                    case raftex::AppendLogResult::E_INVALID_PEER:
-                        this->pushResultCode(nebula::cpp2::ErrorCode::E_INVALID_PEER, partId);
+                    case raftex::ErrorCode::E_STORAGE_RAFT_PEER_NOT_FOUND:
+                        this->pushResultCode(ErrorCode::E_INVALID_PEER, partId);
                         onFinished();
                         return;
-                    case raftex::AppendLogResult::E_NOT_A_LEADER: {
+                    case raftex::ErrorCode::E_STORAGE_RAFT_NOT_A_LEDER: {
                         handleLeaderChanged(spaceId, partId);
                         onFinished();
                         return;
                     }
-                    case raftex::AppendLogResult::E_SENDING_SNAPSHOT:
+                    case raftex::ErrorCode::E_STORAGE_RAFT_SENDING_SNAPSHOT:
                         LOG(INFO) << "Space " << spaceId << ", partId " << partId
                                   << " is still sending snapshot, please wait...";
                         break;
@@ -307,7 +307,7 @@ public:
                 }
                 sleep(FLAGS_waiting_catch_up_interval_in_secs);
             }
-            this->pushResultCode(nebula::cpp2::ErrorCode::E_RETRY_EXHAUSTED, partId);
+            this->pushResultCode(ErrorCode::E_STORAGE_ADMIN_RETRY_EXHAUSTED, partId);
             onFinished();
         });
     }

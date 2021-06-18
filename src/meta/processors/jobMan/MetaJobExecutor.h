@@ -17,7 +17,7 @@ namespace nebula {
 namespace meta {
 
 using PartsOfHost = std::pair<HostAddr, std::vector<PartitionID>>;
-using ErrOrHosts  = ErrorOr<nebula::cpp2::ErrorCode, std::vector<PartsOfHost>>;
+using ErrOrHosts  = ErrorOr<ErrorCode, std::vector<PartsOfHost>>;
 
 class MetaJobExecutor {
 public:
@@ -36,30 +36,30 @@ public:
     virtual bool check() = 0;
 
     // Prepare the Job info from the arguments.
-    virtual nebula::cpp2::ErrorCode prepare() = 0;
+    virtual ErrorCode prepare() = 0;
 
     // The skeleton to run the job.
     // You should rewrite the executeInternal to trigger the calling.
-    nebula::cpp2::ErrorCode  execute();
+    ErrorCode  execute();
 
     void interruptExecution(JobID jobId);
 
     // Stop the job when the user cancel it.
-    virtual nebula::cpp2::ErrorCode stop() = 0;
+    virtual ErrorCode stop() = 0;
 
-    virtual nebula::cpp2::ErrorCode finish(bool) {
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+    virtual ErrorCode finish(bool) {
+        return ErrorCode::SUCCEEDED;
     }
 
     void setSpaceId(GraphSpaceID spaceId) { space_ = spaceId; }
 
-    virtual nebula::cpp2::ErrorCode
+    virtual ErrorCode
     saveSpecialTaskStatus(const cpp2::ReportTaskReq&) {
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
 protected:
-    ErrorOr<nebula::cpp2::ErrorCode, GraphSpaceID>
+    ErrorOr<ErrorCode, GraphSpaceID>
     getSpaceIdFromName(const std::string& spaceName);
 
     ErrOrHosts getTargetHost(GraphSpaceID space);

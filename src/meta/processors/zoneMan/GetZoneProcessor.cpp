@@ -15,7 +15,7 @@ void GetZoneProcessor::process(const cpp2::GetZoneReq& req) {
     auto zoneIdRet = getZoneId(zoneName);
     if (!nebula::ok(zoneIdRet)) {
         auto retCode = nebula::error(zoneIdRet);
-        if (retCode == nebula::cpp2::ErrorCode::E_ZONE_NOT_FOUND) {
+        if (retCode == ErrorCode::E_META_ZONE_NOT_FOUND) {
             LOG(ERROR) << "Get Zone Failed, Zone " << zoneName << " not found.";
         } else {
             LOG(ERROR) << "Get Zone Failed, error: " << apache::thrift::util::enumNameSafe(retCode);
@@ -29,8 +29,8 @@ void GetZoneProcessor::process(const cpp2::GetZoneReq& req) {
     auto zoneValueRet = doGet(std::move(zoneKey));
     if (!nebula::ok(zoneValueRet)) {
         auto retCode = nebula::error(zoneValueRet);
-        if (retCode == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
-            retCode = nebula::cpp2::ErrorCode::E_ZONE_NOT_FOUND;
+        if (retCode == ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND) {
+            retCode = ErrorCode::E_META_ZONE_NOT_FOUND;
         }
         LOG(ERROR) << "Get zone " << zoneName << " failed, error: "
                    << apache::thrift::util::enumNameSafe(retCode);
@@ -42,7 +42,7 @@ void GetZoneProcessor::process(const cpp2::GetZoneReq& req) {
     auto hosts = MetaServiceUtils::parseZoneHosts(std::move(nebula::value(zoneValueRet)));
     LOG(INFO) << "Get Zone: " << zoneName << " node size: " << hosts.size();
     resp_.set_hosts(std::move(hosts));
-    handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
+    handleErrorCode(ErrorCode::SUCCEEDED);
     onFinished();
 }
 

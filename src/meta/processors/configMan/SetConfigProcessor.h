@@ -20,7 +20,7 @@ public:
 
     void process(const cpp2::SetConfigReq& req);
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     setConfig(const cpp2::ConfigModule& module,
               const std::string& name,
               const Value& value,

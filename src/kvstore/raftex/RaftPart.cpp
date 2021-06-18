@@ -355,22 +355,22 @@ void RaftPart::stop() {
 }
 
 
-AppendLogResult RaftPart::canAppendLogs() {
+ErrorCode RaftPart::canAppendLogs() {
     CHECK(!raftLock_.try_lock());
     if (status_ == Status::STARTING) {
         LOG(ERROR) << idStr_ << "The partition is still starting";
-        return AppendLogResult::E_NOT_READY;
+        return ErrorCode::E_STORAGE_RAFT_NOT_READY;
     }
     if (status_ == Status::STOPPED) {
         LOG(ERROR) << idStr_ << "The partition is stopped";
-        return AppendLogResult::E_STOPPED;
+        return ErrorCode::E_STORAGE_RAFT_STOPPED;
     }
     if (role_ != Role::LEADER) {
         LOG_EVERY_N(ERROR, 100) << idStr_ << "The partition is not a leader";
-        return AppendLogResult::E_NOT_A_LEADER;
+        return ErrorCode::E_STORAGE_RAFT_NOT_A_LEDER;
     }
 
-    return AppendLogResult::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 void RaftPart::addLearner(const HostAddr& addr) {
@@ -587,7 +587,7 @@ void RaftPart::commitRemovePeer(const HostAddr& peer) {
     removePeer(peer);
 }
 
-folly::Future<AppendLogResult> RaftPart::appendAsync(ClusterID source,
+folly::Future<ErrorCode> RaftPart::appendAsync(ClusterID source,
                                                      std::string log) {
     if (source < 0) {
         source = clusterId_;
@@ -596,34 +596,34 @@ folly::Future<AppendLogResult> RaftPart::appendAsync(ClusterID source,
 }
 
 
-folly::Future<AppendLogResult> RaftPart::atomicOpAsync(AtomicOp op) {
+folly::Future<ErrorCode> RaftPart::atomicOpAsync(AtomicOp op) {
     return appendLogAsync(clusterId_, LogType::ATOMIC_OP, "", std::move(op));
 }
 
-folly::Future<AppendLogResult> RaftPart::sendCommandAsync(std::string log) {
+folly::Future<ErrorCode> RaftPart::sendCommandAsync(std::string log) {
     return appendLogAsync(clusterId_, LogType::COMMAND, std::move(log));
 }
 
-folly::Future<AppendLogResult> RaftPart::appendLogAsync(ClusterID source,
+folly::Future<ErrorCode> RaftPart::appendLogAsync(ClusterID source,
                                                         LogType logType,
                                                         std::string log,
                                                         AtomicOp op) {
     if (blocking_) {
         // No need to block heartbeats and empty log.
          if ((logType == LogType::NORMAL && !log.empty()) || logType == LogType::ATOMIC_OP) {
-             return AppendLogResult::E_WRITE_BLOCKING;
+             return ErrorCode::E_STORAGE_RAFT_WRITE_BLOCKED;
          }
     }
 
     LogCache swappedOutLogs;
-    auto retFuture = folly::Future<AppendLogResult>::makeEmpty();
+    auto retFuture = folly::Future<ErrorCode>::makeEmpty();
 
     if (bufferOverFlow_) {
         LOG_EVERY_N(WARNING, 100) << idStr_
                      << "The appendLog buffer is full."
                         " Please slow down the log appending rate."
                      << "replicatingLogs_ :" << replicatingLogs_;
-        return AppendLogResult::E_BUFFER_OVERFLOW;
+        return ErrorCode::E_STORAGE_RAFT_BUFFER_OVERFLOW;
     }
     {
         std::lock_guard<std::mutex> lck(logsLock_);
@@ -637,7 +637,7 @@ folly::Future<AppendLogResult> RaftPart::appendLogAsync(ClusterID source,
                             " Please slow down the log appending rate."
                          << "replicatingLogs_ :" << replicatingLogs_;
             bufferOverFlow_ = true;
-            return AppendLogResult::E_BUFFER_OVERFLOW;
+            return ErrorCode::E_STORAGE_RAFT_BUFFER_OVERFLOW;
         }
 
         VLOG(2) << idStr_ << "Appending logs to the buffer";
@@ -674,11 +674,11 @@ folly::Future<AppendLogResult> RaftPart::appendLogAsync(ClusterID source,
 
     LogID firstId = 0;
     TermID termId = 0;
-    AppendLogResult res;
+    ErrorCode res;
     {
         std::lock_guard<std::mutex> g(raftLock_);
         res = canAppendLogs();
-        if (res == AppendLogResult::SUCCEEDED) {
+        if (res == ErrorCode::SUCCEEDED) {
             firstId = lastLogId_ + 1;
             termId = term_;
         }
@@ -703,7 +703,7 @@ folly::Future<AppendLogResult> RaftPart::appendLogAsync(ClusterID source,
             auto opRet = opCB();
             if (!opRet.hasValue()) {
                 // Failed
-                sendingPromise_.setOneSingleValue(AppendLogResult::E_ATOMIC_OP_FAILURE);
+                sendingPromise_.setOneSingleValue(ErrorCode::E_STORAGE_RAFT_ATOMIC_OP_FAILED);
             }
             return opRet;
         });
@@ -727,26 +727,26 @@ void RaftPart::appendLogsInternal(AppendLogsIterator iter, TermID termId) {
         replicatingLogs_ = false;
         return;
     }
-    AppendLogResult res = AppendLogResult::SUCCEEDED;
+    ErrorCode res = ErrorCode::SUCCEEDED;
     do {
         std::lock_guard<std::mutex> g(raftLock_);
         if (status_ != Status::RUNNING) {
             // The partition is not running
             VLOG(2) << idStr_ << "The partition is stopped";
-            res = AppendLogResult::E_STOPPED;
+            res = ErrorCode::E_STORAGE_RAFT_STOPPED;
             break;
         }
 
         if (role_ != Role::LEADER) {
             // Is not a leader any more
             VLOG(2) << idStr_ << "The leader has changed";
-            res = AppendLogResult::E_NOT_A_LEADER;
+            res = ErrorCode::E_STORAGE_RAFT_NOT_A_LEDER;
             break;
         }
         if (term_ != termId) {
             VLOG(2) << idStr_ << "Term has been updated, origin "
                     << termId << ", new " << term_;
-            res = AppendLogResult::E_TERM_OUT_OF_DATE;
+            res = ErrorCode::E_STORAGE_RAFT_TERM_OUT_OF_DATE;
             break;
         }
         currTerm = term_;
@@ -757,7 +757,7 @@ void RaftPart::appendLogsInternal(AppendLogsIterator iter, TermID termId) {
         SlowOpTracker tracker;
         if (!wal_->appendLogs(iter)) {
             LOG_EVERY_N(WARNING, 100) << idStr_ << "Failed to write into WAL";
-            res = AppendLogResult::E_WAL_FAILURE;
+            res = ErrorCode::E_STORAGE_RAFT_WRITE_WAL_FAILED;
             break;
         }
         lastId = wal_->lastLogId();
@@ -796,21 +796,21 @@ void RaftPart::replicateLogs(folly::EventBase* eb,
     using namespace folly;  // NOLINT since the fancy overload of | operator
 
     decltype(hosts_) hosts;
-    AppendLogResult res = AppendLogResult::SUCCEEDED;
+    ErrorCode res = ErrorCode::SUCCEEDED;
     do {
         std::lock_guard<std::mutex> g(raftLock_);
 
         if (status_ != Status::RUNNING) {
             // The partition is not running
             VLOG(2) << idStr_ << "The partition is stopped";
-            res = AppendLogResult::E_STOPPED;
+            res = ErrorCode::E_STORAGE_RAFT_STOPPED;
             break;
         }
 
         if (role_ != Role::LEADER) {
             // Is not a leader any more
             VLOG(2) << idStr_ << "The leader has changed";
-            res = AppendLogResult::E_NOT_A_LEADER;
+            res = ErrorCode::E_STORAGE_RAFT_NOT_A_LEDER;
             break;
         }
 
@@ -918,22 +918,22 @@ void RaftPart::processAppendLogResponses(
                 << " hosts have accepted the logs";
 
         LogID firstLogId = 0;
-        AppendLogResult res = AppendLogResult::SUCCEEDED;
+        ErrorCode res = ErrorCode::SUCCEEDED;
         do {
             std::lock_guard<std::mutex> g(raftLock_);
             if (status_ != Status::RUNNING) {
                 LOG(INFO) << idStr_ << "The partition is stopped";
-                res = AppendLogResult::E_STOPPED;
+                res = ErrorCode::E_STORAGE_RAFT_STOPPED;
                 break;
             }
             if (role_ != Role::LEADER) {
                 LOG(INFO) << idStr_ << "The leader has changed";
-                res = AppendLogResult::E_NOT_A_LEADER;
+                res = ErrorCode::E_STORAGE_RAFT_NOT_A_LEDER;
                 break;
             }
             if (currTerm != term_) {
                 LOG(INFO) << idStr_ << "The leader has changed, ABA problem.";
-                res = AppendLogResult::E_TERM_OUT_OF_DATE;
+                res = ErrorCode::E_STORAGE_RAFT_TERM_OUT_OF_DATE;
                 break;
             }
             lastLogId_ = lastLogId;
@@ -965,10 +965,10 @@ void RaftPart::processAppendLogResponses(
         }
         // Step 4: Fulfill the promise
         if (iter.hasNonAtomicOpLogs()) {
-            sendingPromise_.setOneSharedValue(AppendLogResult::SUCCEEDED);
+            sendingPromise_.setOneSharedValue(ErrorCode::SUCCEEDED);
         }
         if (iter.leadByAtomicOp()) {
-            sendingPromise_.setOneSingleValue(AppendLogResult::SUCCEEDED);
+            sendingPromise_.setOneSingleValue(ErrorCode::SUCCEEDED);
         }
         // Step 5: Check whether need to continue
         // the log replication
@@ -993,7 +993,7 @@ void RaftPart::processAppendLogResponses(
                             if (!opRet.hasValue()) {
                                 // Failed
                                 sendingPromise_.setOneSingleValue(
-                                    AppendLogResult::E_ATOMIC_OP_FAILURE);
+                                    ErrorCode::E_STORAGE_RAFT_ATOMIC_OP_FAILED);
                             }
                             return opRet;
                         });
@@ -1863,7 +1863,7 @@ void RaftPart::processSendSnapshotRequest(const cpp2::SendSnapshotRequest& req,
     return;
 }
 
-folly::Future<AppendLogResult> RaftPart::sendHeartbeat() {
+folly::Future<ErrorCode> RaftPart::sendHeartbeat() {
     VLOG(2) << idStr_ << "Send heartbeat";
     std::string log = "";
     return appendLogAsync(clusterId_, LogType::NORMAL, std::move(log));
@@ -1898,8 +1898,8 @@ std::pair<LogID, TermID> RaftPart::lastLogInfo() const {
     return std::make_pair(wal_->lastLogId(), wal_->lastLogTerm());
 }
 
-bool RaftPart::checkAppendLogResult(AppendLogResult res) {
-    if (res != AppendLogResult::SUCCEEDED) {
+bool RaftPart::checkAppendLogResult(ErrorCode res) {
+    if (res != ErrorCode::SUCCEEDED) {
         {
             std::lock_guard<std::mutex> lck(logsLock_);
             logs_.clear();
@@ -1924,16 +1924,16 @@ void RaftPart::reset() {
     lastTotalSize_ = 0;
 }
 
-AppendLogResult RaftPart::isCatchedUp(const HostAddr& peer) {
+ErrorCode RaftPart::isCatchedUp(const HostAddr& peer) {
     std::lock_guard<std::mutex> lck(raftLock_);
     LOG(INFO) << idStr_ << "Check whether I catch up";
     if (role_ != Role::LEADER) {
         LOG(INFO) << idStr_ << "I am not the leader";
-        return AppendLogResult::E_NOT_A_LEADER;
+        return ErrorCode::E_STORAGE_RAFT_NOT_A_LEDER;
     }
     if (peer == addr_) {
         LOG(INFO) << idStr_ << "I am the leader";
-        return AppendLogResult::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
     for (auto& host : hosts_) {
         if (host->addr_ == peer) {
@@ -1942,13 +1942,13 @@ AppendLogResult RaftPart::isCatchedUp(const HostAddr& peer) {
                 LOG(INFO) << idStr_ << "The committed log id of peer is "
                           << host->followerCommittedLogId_
                           << ", which is invalid or less than my first wal log id";
-                return AppendLogResult::E_SENDING_SNAPSHOT;
+                return ErrorCode::E_STORAGE_RAFT_SENDING_SNAPSHOT;
             }
-            return host->sendingSnapshot_ ? AppendLogResult::E_SENDING_SNAPSHOT
-                                          : AppendLogResult::SUCCEEDED;
+            return host->sendingSnapshot_ ? ErrorCode::E_STORAGE_RAFT_SENDING_SNAPSHOT
+                                          : ErrorCode::SUCCEEDED;
         }
     }
-    return AppendLogResult::E_INVALID_PEER;
+    return ErrorCode::E_STORAGE_RAFT_PEER_NOT_FOUND;
 }
 
 bool RaftPart::linkCurrentWAL(const char* newPath) {

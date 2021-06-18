@@ -30,14 +30,14 @@ public:
         spaces_ = std::move(spaces);
     }
 
-    ErrorOr<nebula::cpp2::ErrorCode,
+    ErrorOr<ErrorCode,
             std::unordered_map<GraphSpaceID, std::vector<cpp2::BackupInfo>>>
     createSnapshot(const std::string& name);
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     dropSnapshot(const std::string& name, const std::vector<HostAddr>& hosts);
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     blockingWrites(storage::cpp2::EngineSignType sign);
 
 private:
@@ -45,7 +45,7 @@ private:
         executor_.reset(new folly::CPUThreadPoolExecutor(1));
     }
 
-    ErrorOr<nebula::cpp2::ErrorCode, std::map<GraphSpaceID, std::set<HostAddr>>>
+    ErrorOr<ErrorCode, std::map<GraphSpaceID, std::set<HostAddr>>>
     getSpacesHosts();
 
 private:

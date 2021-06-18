@@ -40,7 +40,7 @@ private:
         : BaseProcessor<cpp2::ExecResponse>(env, counters)
         , vertexCache_(cache) {}
 
-    ErrorOr<nebula::cpp2::ErrorCode, std::string>
+    ErrorOr<ErrorCode, std::string>
     findOldValue(PartitionID partId,
                  const VertexID& vId,
                  TagID tagId);

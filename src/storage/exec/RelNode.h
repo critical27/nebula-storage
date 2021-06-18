@@ -19,9 +19,9 @@
 namespace nebula {
 namespace storage {
 
-using NullHandler = std::function<nebula::cpp2::ErrorCode(const std::vector<PropContext>*)>;
+using NullHandler = std::function<ErrorCode(const std::vector<PropContext>*)>;
 
-using PropHandler = std::function<nebula::cpp2::ErrorCode(folly::StringPiece,
+using PropHandler = std::function<ErrorCode(folly::StringPiece,
                                                           RowReader*,
                                                           const std::vector<PropContext>* props)>;
 
@@ -34,24 +34,24 @@ class RelNode {
     friend class StoragePlan<T>;
 
 public:
-    virtual nebula::cpp2::ErrorCode execute(PartitionID partId, const T& input) {
+    virtual ErrorCode execute(PartitionID partId, const T& input) {
         for (auto* dependency : dependencies_) {
             auto ret = dependency->execute(partId, input);
-            if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+            if (ret != ErrorCode::SUCCEEDED) {
                 return ret;
             }
         }
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
-    virtual nebula::cpp2::ErrorCode execute(PartitionID partId) {
+    virtual ErrorCode execute(PartitionID partId) {
         for (auto* dependency : dependencies_) {
             auto ret = dependency->execute(partId);
-            if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+            if (ret != ErrorCode::SUCCEEDED) {
                 return ret;
             }
         }
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
     void addDependency(RelNode<T>* dep) {

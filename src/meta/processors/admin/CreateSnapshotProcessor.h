@@ -22,7 +22,7 @@ public:
     }
     void process(const cpp2::CreateSnapshotReq& req);
 
-    nebula::cpp2::ErrorCode cancelWriteBlocking();
+    ErrorCode cancelWriteBlocking();
 
 private:
     explicit CreateSnapshotProcessor(kvstore::KVStore* kvstore,

@@ -31,11 +31,11 @@ static cpp2::HostRole toHostRole(cpp2::ListHostType type) {
 }
 
 void ListHostsProcessor::process(const cpp2::ListHostsReq& req) {
-    nebula::cpp2::ErrorCode retCode;
+    ErrorCode retCode;
     {
         folly::SharedMutex::ReadHolder rHolder(LockUtils::spaceLock());
         retCode = getSpaceIdNameMap();
-        if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (retCode != ErrorCode::SUCCEEDED) {
             handleErrorCode(retCode);
             onFinished();
             return;
@@ -44,7 +44,7 @@ void ListHostsProcessor::process(const cpp2::ListHostsReq& req) {
         meta::cpp2::ListHostType type = req.get_type();
         if (type == cpp2::ListHostType::ALLOC) {
             retCode = fillLeaders();
-            if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+            if (retCode != ErrorCode::SUCCEEDED) {
                 handleErrorCode(retCode);
                 onFinished();
                 return;
@@ -56,7 +56,7 @@ void ListHostsProcessor::process(const cpp2::ListHostsReq& req) {
             retCode = allHostsWithStatus(hostRole);
         }
     }
-    if (retCode == nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (retCode == ErrorCode::SUCCEEDED) {
         resp_.set_hosts(std::move(hostItems_));
     }
     handleErrorCode(retCode);
@@ -70,7 +70,7 @@ void ListHostsProcessor::process(const cpp2::ListHostsReq& req) {
  * which return a bunch of host infomation
  * it's not necessary add this interface only for gitInfoSHA
  * */
-nebula::cpp2::ErrorCode ListHostsProcessor::allMetaHostsStatus() {
+ErrorCode ListHostsProcessor::allMetaHostsStatus() {
     auto errOrPart = kvstore_->part(kDefaultSpaceId, kDefaultPartId);
     if (!nebula::ok(errOrPart)) {
         auto retCode = nebula::error(errOrPart);
@@ -90,10 +90,10 @@ nebula::cpp2::ErrorCode ListHostsProcessor::allMetaHostsStatus() {
         item.set_status(cpp2::HostStatus::ONLINE);
         hostItems_.emplace_back(item);
     }
-    return nebula::cpp2::ErrorCode::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
-nebula::cpp2::ErrorCode ListHostsProcessor::allHostsWithStatus(cpp2::HostRole role) {
+ErrorCode ListHostsProcessor::allHostsWithStatus(cpp2::HostRole role) {
     if (role == cpp2::HostRole::META) {
         return allMetaHostsStatus();
     }
@@ -101,9 +101,6 @@ nebula::cpp2::ErrorCode ListHostsProcessor::allHostsWithStatus(cpp2::HostRole ro
     auto ret = doPrefix(hostPrefix);
     if (!nebula::ok(ret)) {
         auto retCode = nebula::error(ret);
-        if (retCode != nebula::cpp2::ErrorCode::E_LEADER_CHANGED) {
-            retCode = nebula::cpp2::ErrorCode::E_NO_HOSTS;
-        }
         LOG(ERROR) << "List Hosts Failed, error: "
                    << apache::thrift::util::enumNameSafe(retCode);
         return retCode;
@@ -142,12 +139,12 @@ nebula::cpp2::ErrorCode ListHostsProcessor::allHostsWithStatus(cpp2::HostRole ro
     }
 
     removeExpiredHosts(std::move(removeHostsKey));
-    return nebula::cpp2::ErrorCode::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
-nebula::cpp2::ErrorCode ListHostsProcessor::fillLeaders() {
+ErrorCode ListHostsProcessor::fillLeaders() {
     auto retCode = allHostsWithStatus(cpp2::HostRole::STORAGE);
-    if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (retCode != ErrorCode::SUCCEEDED) {
         LOG(ERROR) << "Get all host's status failed";
         return retCode;
     }
@@ -163,9 +160,6 @@ nebula::cpp2::ErrorCode ListHostsProcessor::fillLeaders() {
     auto iterRet = doPrefix(prefix);
     if (!nebula::ok(iterRet)) {
         retCode = nebula::error(iterRet);
-        if (retCode != nebula::cpp2::ErrorCode::E_LEADER_CHANGED) {
-            retCode = nebula::cpp2::ErrorCode::E_NO_HOSTS;
-        }
         LOG(ERROR) << "List leader Hosts Failed, error: "
                    << apache::thrift::util::enumNameSafe(retCode);
         return retCode;
@@ -176,7 +170,7 @@ nebula::cpp2::ErrorCode ListHostsProcessor::fillLeaders() {
     // get hosts which have send heartbeat recently
     HostAddr host;
     TermID term;
-    nebula::cpp2::ErrorCode code;
+    ErrorCode code;
     std::vector<std::string> removeLeadersKey;
     for (; iter->valid(); iter->next()) {
         auto spaceIdAndPartId = MetaServiceUtils::parseLeaderKeyV3(iter->key());
@@ -191,7 +185,7 @@ nebula::cpp2::ErrorCode ListHostsProcessor::fillLeaders() {
         }
 
         std::tie(host, term, code) = MetaServiceUtils::parseLeaderValV3(iter->val());
-        if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (code != ErrorCode::SUCCEEDED) {
             continue;
         }
         auto it = std::find(activeHosts.begin(), activeHosts.end(), host);
@@ -213,10 +207,10 @@ nebula::cpp2::ErrorCode ListHostsProcessor::fillLeaders() {
     }
 
     removeInvalidLeaders(std::move(removeLeadersKey));
-    return nebula::cpp2::ErrorCode::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
-nebula::cpp2::ErrorCode ListHostsProcessor::fillAllParts() {
+ErrorCode ListHostsProcessor::fillAllParts() {
     std::unique_ptr<kvstore::KVIterator> iter;
     using SpaceNameAndPartitions = std::unordered_map<std::string, std::vector<PartitionID>>;
     std::unordered_map<HostAddr, SpaceNameAndPartitions> allParts;
@@ -259,7 +253,7 @@ nebula::cpp2::ErrorCode ListHostsProcessor::fillAllParts() {
         }
     }
 
-    return nebula::cpp2::ErrorCode::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 // Remove hosts that long time at OFFLINE status
@@ -270,8 +264,8 @@ void ListHostsProcessor::removeExpiredHosts(std::vector<std::string>&& removeHos
     kvstore_->asyncMultiRemove(kDefaultSpaceId,
                                kDefaultPartId,
                                std::move(removeHostsKey),
-                               [] (nebula::cpp2::ErrorCode code) {
-            if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+                               [] (ErrorCode code) {
+            if (code != ErrorCode::SUCCEEDED) {
                 LOG(ERROR) << "Async remove long time offline hosts failed: "
                            << apache::thrift::util::enumNameSafe(code);
             }
@@ -286,23 +280,20 @@ void ListHostsProcessor::removeInvalidLeaders(std::vector<std::string>&& removeL
     kvstore_->asyncMultiRemove(kDefaultSpaceId,
                                kDefaultPartId,
                                std::move(removeLeadersKey),
-                               [] (nebula::cpp2::ErrorCode code) {
-            if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+                               [] (ErrorCode code) {
+            if (code != ErrorCode::SUCCEEDED) {
                 LOG(ERROR) << "Async remove long time offline hosts failed: "
                            << apache::thrift::util::enumNameSafe(code);
             }
         });
 }
 
-nebula::cpp2::ErrorCode ListHostsProcessor::getSpaceIdNameMap() {
+ErrorCode ListHostsProcessor::getSpaceIdNameMap() {
     // Get all spaces
     const auto& spacePrefix = MetaServiceUtils::spacePrefix();
     auto iterRet = doPrefix(spacePrefix);
      if (!nebula::ok(iterRet)) {
         auto retCode = nebula::error(iterRet);
-        if (retCode != nebula::cpp2::ErrorCode::E_LEADER_CHANGED) {
-            retCode = nebula::cpp2::ErrorCode::E_NO_HOSTS;
-        }
         LOG(ERROR) << "List Hosts Failed, error "
                    << apache::thrift::util::enumNameSafe(retCode);
         return retCode;
@@ -315,7 +306,7 @@ nebula::cpp2::ErrorCode ListHostsProcessor::getSpaceIdNameMap() {
         spaceIdNameMap_.emplace(spaceId, MetaServiceUtils::spaceName(iter->val()));
         iter->next();
     }
-    return nebula::cpp2::ErrorCode::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 std::unordered_map<std::string, std::vector<PartitionID>>

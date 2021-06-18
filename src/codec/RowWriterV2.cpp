@@ -194,10 +194,10 @@ bool RowWriterV2::checkNullBit(ssize_t pos) const noexcept {
 }
 
 
-WriteResult RowWriterV2::setValue(ssize_t index, const Value& val) noexcept {
+ErrorCode RowWriterV2::setValue(ssize_t index, const Value& val) noexcept {
     CHECK(!finished_) << "You have called finish()";
     if (index < 0 || static_cast<size_t>(index) >= schema_->getNumFields()) {
-        return WriteResult::UNKNOWN_FIELD;
+        return ErrorCode::E_STORAGE_CODEC_UNKNOWN_FIELD;
     }
 
     switch (val.type()) {
@@ -218,44 +218,44 @@ WriteResult RowWriterV2::setValue(ssize_t index, const Value& val) noexcept {
         case Value::Type::DATETIME:
             return write(index, val.getDateTime());
         default:
-            return WriteResult::TYPE_MISMATCH;
+            return ErrorCode::E_STORAGE_CODEC_TYPE_MISMATCH;
     }
 }
 
 
-WriteResult RowWriterV2::setValue(const std::string &name, const Value& val) noexcept {
+ErrorCode RowWriterV2::setValue(const std::string &name, const Value& val) noexcept {
     CHECK(!finished_) << "You have called finish()";
     int64_t index = schema_->getFieldIndex(name);
     return setValue(index, val);
 }
 
 
-WriteResult RowWriterV2::setNull(ssize_t index) noexcept {
+ErrorCode RowWriterV2::setNull(ssize_t index) noexcept {
     CHECK(!finished_) << "You have called finish()";
     if (index < 0 || static_cast<size_t>(index) >= schema_->getNumFields()) {
-        return WriteResult::UNKNOWN_FIELD;
+        return ErrorCode::E_STORAGE_CODEC_UNKNOWN_FIELD;
     }
 
     // Make sure the field is nullable
     auto field = schema_->field(index);
     if (!field->nullable()) {
-        return WriteResult::NOT_NULLABLE;
+        return ErrorCode::E_STORAGE_CODEC_NOT_NULLABLE;
     }
 
     setNullBit(field->nullFlagPos());
     isSet_[index] = true;
-    return WriteResult::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 
-WriteResult RowWriterV2::setNull(const std::string& name) noexcept {
+ErrorCode RowWriterV2::setNull(const std::string& name) noexcept {
     CHECK(!finished_) << "You have called finish()";
     int64_t index = schema_->getFieldIndex(name);
     return setNull(index);
 }
 
 
-WriteResult RowWriterV2::write(ssize_t index, bool v) noexcept {
+ErrorCode RowWriterV2::write(ssize_t index, bool v) noexcept {
     auto field = schema_->field(index);
     auto offset = headerLen_ + numNullBytes_ + field->offset();
     switch (field->type()) {
@@ -276,24 +276,24 @@ WriteResult RowWriterV2::write(ssize_t index, bool v) noexcept {
             buf_[offset + 0] = v ? 0x01 : 0;
             break;
         default:
-            return WriteResult::TYPE_MISMATCH;
+            return ErrorCode::E_STORAGE_CODEC_TYPE_MISMATCH;
     }
     if (field->nullable()) {
         clearNullBit(field->nullFlagPos());
     }
     isSet_[index] = true;
-    return WriteResult::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 
-WriteResult RowWriterV2::write(ssize_t index, float v) noexcept {
+ErrorCode RowWriterV2::write(ssize_t index, float v) noexcept {
     auto field = schema_->field(index);
     auto offset = headerLen_ + numNullBytes_ + field->offset();
     switch (field->type()) {
         case meta::cpp2::PropertyType::INT8: {
             if (v > std::numeric_limits<int8_t>::max() ||
                 v < std::numeric_limits<int8_t>::min()) {
-                return WriteResult::OUT_OF_RANGE;
+                return ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE;
             }
             int8_t iv = v;
             buf_[offset] = iv;
@@ -302,7 +302,7 @@ WriteResult RowWriterV2::write(ssize_t index, float v) noexcept {
         case meta::cpp2::PropertyType::INT16: {
             if (v > std::numeric_limits<int16_t>::max() ||
                 v < std::numeric_limits<int16_t>::min()) {
-                return WriteResult::OUT_OF_RANGE;
+                return ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE;
             }
             int16_t iv = v;
             memcpy(&buf_[offset], reinterpret_cast<void*>(&iv), sizeof(int16_t));
@@ -311,7 +311,7 @@ WriteResult RowWriterV2::write(ssize_t index, float v) noexcept {
         case meta::cpp2::PropertyType::INT32: {
             if (v > static_cast<float>(std::numeric_limits<int32_t>::max()) ||
                 v < static_cast<float>(std::numeric_limits<int32_t>::min())) {
-                return WriteResult::OUT_OF_RANGE;
+                return ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE;
             }
             int32_t iv = v;
             memcpy(&buf_[offset], reinterpret_cast<void*>(&iv), sizeof(int32_t));
@@ -320,7 +320,7 @@ WriteResult RowWriterV2::write(ssize_t index, float v) noexcept {
         case meta::cpp2::PropertyType::INT64: {
             if (v > static_cast<float>(std::numeric_limits<int64_t>::max()) ||
                 v < static_cast<float>(std::numeric_limits<int64_t>::min())) {
-                return WriteResult::OUT_OF_RANGE;
+                return ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE;
             }
             int64_t iv = v;
             memcpy(&buf_[offset], reinterpret_cast<void*>(&iv), sizeof(int64_t));
@@ -336,24 +336,24 @@ WriteResult RowWriterV2::write(ssize_t index, float v) noexcept {
             break;
         }
         default:
-            return WriteResult::TYPE_MISMATCH;
+            return ErrorCode::E_STORAGE_CODEC_TYPE_MISMATCH;
     }
     if (field->nullable()) {
         clearNullBit(field->nullFlagPos());
     }
     isSet_[index] = true;
-    return WriteResult::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 
-WriteResult RowWriterV2::write(ssize_t index, double v) noexcept {
+ErrorCode RowWriterV2::write(ssize_t index, double v) noexcept {
     auto field = schema_->field(index);
     auto offset = headerLen_ + numNullBytes_ + field->offset();
     switch (field->type()) {
         case meta::cpp2::PropertyType::INT8: {
             if (v > std::numeric_limits<int8_t>::max() ||
                 v < std::numeric_limits<int8_t>::min()) {
-                return WriteResult::OUT_OF_RANGE;
+                return ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE;
             }
             int8_t iv = v;
             buf_[offset] = iv;
@@ -362,7 +362,7 @@ WriteResult RowWriterV2::write(ssize_t index, double v) noexcept {
         case meta::cpp2::PropertyType::INT16: {
             if (v > std::numeric_limits<int16_t>::max() ||
                 v < std::numeric_limits<int16_t>::min()) {
-                return WriteResult::OUT_OF_RANGE;
+                return ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE;
             }
             int16_t iv = v;
             memcpy(&buf_[offset], reinterpret_cast<void*>(&iv), sizeof(int16_t));
@@ -371,7 +371,7 @@ WriteResult RowWriterV2::write(ssize_t index, double v) noexcept {
         case meta::cpp2::PropertyType::INT32: {
             if (v > std::numeric_limits<int32_t>::max() ||
                 v < std::numeric_limits<int32_t>::min()) {
-                return WriteResult::OUT_OF_RANGE;
+                return ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE;
             }
             int32_t iv = v;
             memcpy(&buf_[offset], reinterpret_cast<void*>(&iv), sizeof(int32_t));
@@ -380,7 +380,7 @@ WriteResult RowWriterV2::write(ssize_t index, double v) noexcept {
         case meta::cpp2::PropertyType::INT64: {
             if (v > static_cast<double>(std::numeric_limits<int64_t>::max()) ||
                 v < static_cast<double>(std::numeric_limits<int64_t>::min())) {
-                return WriteResult::OUT_OF_RANGE;
+                return ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE;
             }
             int64_t iv = v;
             memcpy(&buf_[offset], reinterpret_cast<void*>(&iv), sizeof(int64_t));
@@ -389,7 +389,7 @@ WriteResult RowWriterV2::write(ssize_t index, double v) noexcept {
         case meta::cpp2::PropertyType::FLOAT: {
             if (v > std::numeric_limits<float>::max() ||
                 v < std::numeric_limits<float>::lowest()) {
-                return WriteResult::OUT_OF_RANGE;
+                return ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE;
             }
             float fv = v;
             memcpy(&buf_[offset], reinterpret_cast<void*>(&fv), sizeof(float));
@@ -400,22 +400,22 @@ WriteResult RowWriterV2::write(ssize_t index, double v) noexcept {
             break;
         }
         default:
-            return WriteResult::TYPE_MISMATCH;
+            return ErrorCode::E_STORAGE_CODEC_TYPE_MISMATCH;
     }
     if (field->nullable()) {
         clearNullBit(field->nullFlagPos());
     }
     isSet_[index] = true;
-    return WriteResult::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 
-WriteResult RowWriterV2::write(ssize_t index, uint8_t v) noexcept {
+ErrorCode RowWriterV2::write(ssize_t index, uint8_t v) noexcept {
     return write(index, static_cast<int8_t>(v));
 }
 
 
-WriteResult RowWriterV2::write(ssize_t index, int8_t v) noexcept {
+ErrorCode RowWriterV2::write(ssize_t index, int8_t v) noexcept {
     auto field = schema_->field(index);
     auto offset = headerLen_ + numNullBytes_ + field->offset();
     switch (field->type()) {
@@ -453,22 +453,22 @@ WriteResult RowWriterV2::write(ssize_t index, int8_t v) noexcept {
             break;
         }
         default:
-            return WriteResult::TYPE_MISMATCH;
+            return ErrorCode::E_STORAGE_CODEC_TYPE_MISMATCH;
     }
     if (field->nullable()) {
         clearNullBit(field->nullFlagPos());
     }
     isSet_[index] = true;
-    return WriteResult::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 
-WriteResult RowWriterV2::write(ssize_t index, uint16_t v) noexcept {
+ErrorCode RowWriterV2::write(ssize_t index, uint16_t v) noexcept {
     return write(index, static_cast<int16_t>(v));
 }
 
 
-WriteResult RowWriterV2::write(ssize_t index, int16_t v) noexcept {
+ErrorCode RowWriterV2::write(ssize_t index, int16_t v) noexcept {
     auto field = schema_->field(index);
     auto offset = headerLen_ + numNullBytes_ + field->offset();
     switch (field->type()) {
@@ -479,7 +479,7 @@ WriteResult RowWriterV2::write(ssize_t index, int16_t v) noexcept {
         case meta::cpp2::PropertyType::INT8: {
             if (v > std::numeric_limits<int8_t>::max() ||
                 v < std::numeric_limits<int8_t>::min()) {
-                return WriteResult::OUT_OF_RANGE;
+                return ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE;
             }
             int8_t iv = v;
             buf_[offset] = iv;
@@ -510,22 +510,22 @@ WriteResult RowWriterV2::write(ssize_t index, int16_t v) noexcept {
             break;
         }
         default:
-            return WriteResult::TYPE_MISMATCH;
+            return ErrorCode::E_STORAGE_CODEC_TYPE_MISMATCH;
     }
     if (field->nullable()) {
         clearNullBit(field->nullFlagPos());
     }
     isSet_[index] = true;
-    return WriteResult::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 
-WriteResult RowWriterV2::write(ssize_t index, uint32_t v) noexcept {
+ErrorCode RowWriterV2::write(ssize_t index, uint32_t v) noexcept {
     return write(index, static_cast<int32_t>(v));
 }
 
 
-WriteResult RowWriterV2::write(ssize_t index, int32_t v) noexcept {
+ErrorCode RowWriterV2::write(ssize_t index, int32_t v) noexcept {
     auto field = schema_->field(index);
     auto offset = headerLen_ + numNullBytes_ + field->offset();
     switch (field->type()) {
@@ -536,7 +536,7 @@ WriteResult RowWriterV2::write(ssize_t index, int32_t v) noexcept {
         case meta::cpp2::PropertyType::INT8: {
             if (v > std::numeric_limits<int8_t>::max() ||
                 v < std::numeric_limits<int8_t>::min()) {
-                return WriteResult::OUT_OF_RANGE;
+                return ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE;
             }
             int8_t iv = v;
             buf_[offset] = iv;
@@ -545,7 +545,7 @@ WriteResult RowWriterV2::write(ssize_t index, int32_t v) noexcept {
         case meta::cpp2::PropertyType::INT16: {
             if (v > std::numeric_limits<int16_t>::max() ||
                 v < std::numeric_limits<int16_t>::min()) {
-                return WriteResult::OUT_OF_RANGE;
+                return ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE;
             }
             int16_t iv = v;
             memcpy(&buf_[offset], reinterpret_cast<void*>(&iv), sizeof(int16_t));
@@ -559,7 +559,7 @@ WriteResult RowWriterV2::write(ssize_t index, int32_t v) noexcept {
             // 32-bit timestamp can only support upto 2038-01-19
             auto ret = time::TimeUtils::toTimestamp(v);
             if (!ret.ok()) {
-                return WriteResult::OUT_OF_RANGE;
+                return ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE;
             }
             auto ts = ret.value().getInt();
             memcpy(&buf_[offset], reinterpret_cast<void*>(&ts), sizeof(int64_t));
@@ -581,22 +581,22 @@ WriteResult RowWriterV2::write(ssize_t index, int32_t v) noexcept {
             break;
         }
         default:
-            return WriteResult::TYPE_MISMATCH;
+            return ErrorCode::E_STORAGE_CODEC_TYPE_MISMATCH;
     }
     if (field->nullable()) {
         clearNullBit(field->nullFlagPos());
     }
     isSet_[index] = true;
-    return WriteResult::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 
-WriteResult RowWriterV2::write(ssize_t index, uint64_t v) noexcept {
+ErrorCode RowWriterV2::write(ssize_t index, uint64_t v) noexcept {
     return write(index, static_cast<int64_t>(v));
 }
 
 
-WriteResult RowWriterV2::write(ssize_t index, int64_t v) noexcept {
+ErrorCode RowWriterV2::write(ssize_t index, int64_t v) noexcept {
     auto field = schema_->field(index);
     auto offset = headerLen_ + numNullBytes_ + field->offset();
     switch (field->type()) {
@@ -607,7 +607,7 @@ WriteResult RowWriterV2::write(ssize_t index, int64_t v) noexcept {
         case meta::cpp2::PropertyType::INT8: {
             if (v > std::numeric_limits<int8_t>::max() ||
                 v < std::numeric_limits<int8_t>::min()) {
-                return WriteResult::OUT_OF_RANGE;
+                return ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE;
             }
             int8_t iv = v;
             buf_[offset] = iv;
@@ -616,7 +616,7 @@ WriteResult RowWriterV2::write(ssize_t index, int64_t v) noexcept {
         case meta::cpp2::PropertyType::INT16: {
             if (v > std::numeric_limits<int16_t>::max() ||
                 v < std::numeric_limits<int16_t>::min()) {
-                return WriteResult::OUT_OF_RANGE;
+                return ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE;
             }
             int16_t iv = v;
             memcpy(&buf_[offset], reinterpret_cast<void*>(&iv), sizeof(int16_t));
@@ -625,7 +625,7 @@ WriteResult RowWriterV2::write(ssize_t index, int64_t v) noexcept {
         case meta::cpp2::PropertyType::INT32: {
             if (v > std::numeric_limits<int32_t>::max() ||
                 v < std::numeric_limits<int32_t>::min()) {
-                return WriteResult::OUT_OF_RANGE;
+                return ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE;
             }
             int32_t iv = v;
             memcpy(&buf_[offset], reinterpret_cast<void*>(&iv), sizeof(int32_t));
@@ -635,7 +635,7 @@ WriteResult RowWriterV2::write(ssize_t index, int64_t v) noexcept {
             // 64-bit timestamp has way broader time range
             auto ret = time::TimeUtils::toTimestamp(v);
             if (!ret.ok()) {
-                return WriteResult::OUT_OF_RANGE;
+                return ErrorCode::E_STORAGE_CODEC_OUT_OF_RANGE;
             }
             auto ts = ret.value().getInt();
             memcpy(&buf_[offset], reinterpret_cast<void*>(&ts), sizeof(int64_t));
@@ -656,27 +656,27 @@ WriteResult RowWriterV2::write(ssize_t index, int64_t v) noexcept {
             break;
         }
         default:
-            return WriteResult::TYPE_MISMATCH;
+            return ErrorCode::E_STORAGE_CODEC_TYPE_MISMATCH;
     }
     if (field->nullable()) {
         clearNullBit(field->nullFlagPos());
     }
     isSet_[index] = true;
-    return WriteResult::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 
-WriteResult RowWriterV2::write(ssize_t index, const std::string& v) noexcept {
+ErrorCode RowWriterV2::write(ssize_t index, const std::string& v) noexcept {
     return write(index, folly::StringPiece(v));
 }
 
 
-WriteResult RowWriterV2::write(ssize_t index, const char* v) noexcept {
+ErrorCode RowWriterV2::write(ssize_t index, const char* v) noexcept {
     return write(index, folly::StringPiece(v));
 }
 
 
-WriteResult RowWriterV2::write(ssize_t index, folly::StringPiece v) noexcept {
+ErrorCode RowWriterV2::write(ssize_t index, folly::StringPiece v) noexcept {
     auto field = schema_->field(index);
     auto offset = headerLen_ + numNullBytes_ + field->offset();
     switch (field->type()) {
@@ -718,17 +718,17 @@ WriteResult RowWriterV2::write(ssize_t index, folly::StringPiece v) noexcept {
             break;
         }
         default:
-            return WriteResult::TYPE_MISMATCH;
+            return ErrorCode::E_STORAGE_CODEC_TYPE_MISMATCH;
     }
     if (field->nullable()) {
         clearNullBit(field->nullFlagPos());
     }
     isSet_[index] = true;
-    return WriteResult::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 
-WriteResult RowWriterV2::write(ssize_t index, const Date& v) noexcept {
+ErrorCode RowWriterV2::write(ssize_t index, const Date& v) noexcept {
     auto field = schema_->field(index);
     auto offset = headerLen_ + numNullBytes_ + field->offset();
     switch (field->type()) {
@@ -746,16 +746,16 @@ WriteResult RowWriterV2::write(ssize_t index, const Date& v) noexcept {
                    3 * sizeof(int8_t) + 2 * sizeof(int32_t));
             break;
         default:
-            return WriteResult::TYPE_MISMATCH;
+            return ErrorCode::E_STORAGE_CODEC_TYPE_MISMATCH;
     }
     if (field->nullable()) {
         clearNullBit(field->nullFlagPos());
     }
     isSet_[index] = true;
-    return WriteResult::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
-WriteResult RowWriterV2::write(ssize_t index, const Time& v) noexcept {
+ErrorCode RowWriterV2::write(ssize_t index, const Time& v) noexcept {
     auto field = schema_->field(index);
     auto offset = headerLen_ + numNullBytes_ + field->offset();
     switch (field->type()) {
@@ -768,16 +768,16 @@ WriteResult RowWriterV2::write(ssize_t index, const Time& v) noexcept {
                    sizeof(int32_t));
             break;
         default:
-            return WriteResult::TYPE_MISMATCH;
+            return ErrorCode::E_STORAGE_CODEC_TYPE_MISMATCH;
     }
     if (field->nullable()) {
         clearNullBit(field->nullFlagPos());
     }
     isSet_[index] = true;
-    return WriteResult::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
-WriteResult RowWriterV2::write(ssize_t index, const DateTime& v) noexcept {
+ErrorCode RowWriterV2::write(ssize_t index, const DateTime& v) noexcept {
     auto field = schema_->field(index);
     auto offset = headerLen_ + numNullBytes_ + field->offset();
     int16_t year = v.year;
@@ -805,27 +805,27 @@ WriteResult RowWriterV2::write(ssize_t index, const DateTime& v) noexcept {
                    sizeof(int32_t));
             break;
         default:
-            return WriteResult::TYPE_MISMATCH;
+            return ErrorCode::E_STORAGE_CODEC_TYPE_MISMATCH;
     }
     if (field->nullable()) {
         clearNullBit(field->nullFlagPos());
     }
     isSet_[index] = true;
-    return WriteResult::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 
-WriteResult RowWriterV2::checkUnsetFields() noexcept {
+ErrorCode RowWriterV2::checkUnsetFields() noexcept {
     DefaultValueContext expCtx;
     for (size_t i = 0; i < schema_->getNumFields(); i++) {
         if (!isSet_[i]) {
             auto field = schema_->field(i);
             if (!field->nullable() && !field->hasDefault()) {
                 // The field neither can be NULL, nor has a default value
-                return WriteResult::FIELD_UNSET;
+                return ErrorCode::E_STORAGE_CODEC_FIELD_UNSET;
             }
 
-            WriteResult r = WriteResult::SUCCEEDED;
+            ErrorCode r = ErrorCode::SUCCEEDED;
             if (field->hasDefault()) {
                 auto expr = field->defaultValue()->clone();
                 auto defVal = Expression::eval(expr.get(), expCtx);
@@ -864,13 +864,13 @@ WriteResult RowWriterV2::checkUnsetFields() noexcept {
                 setNullBit(field->nullFlagPos());
             }
 
-            if (r != WriteResult::SUCCEEDED) {
+            if (r != ErrorCode::SUCCEEDED) {
                 return r;
             }
         }
     }
 
-    return WriteResult::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 
@@ -923,13 +923,13 @@ std::string RowWriterV2::processOutOfSpace() noexcept {
 }
 
 
-WriteResult RowWriterV2::finish() noexcept {
+ErrorCode RowWriterV2::finish() noexcept {
     CHECK(!finished_) << "You have called finish()";
 
     // First to check whether all fields are set. If not, to check whether
     // it can be NULL or there is a default value for the field
-    WriteResult res = checkUnsetFields();
-    if (res != WriteResult::SUCCEEDED) {
+    ErrorCode res = checkUnsetFields();
+    if (res != ErrorCode::SUCCEEDED) {
         return res;
     }
 
@@ -943,7 +943,7 @@ WriteResult RowWriterV2::finish() noexcept {
     buf_.append(reinterpret_cast<char*>(&ts), sizeof(int64_t));
 
     finished_ = true;
-    return WriteResult::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 }  // namespace nebula

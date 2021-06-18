@@ -103,7 +103,7 @@ private:
                             VertexID& dstId,
                             std::shared_ptr<nebula::meta::cpp2::IndexItem> index);
 
-    WriteResult convertValue(const meta::NebulaSchemaProvider* newSchema,
+    ErrorCode convertValue(const meta::NebulaSchemaProvider* newSchema,
                              const meta::SchemaProviderIf* oldSchema,
                              std::string& name,
                              Value& val);

@@ -36,13 +36,13 @@ void mockData(StorageEnv* env, int32_t partCount) {
         }
         folly::Baton<true, std::atomic> baton;
         env->kvstore_->asyncMultiPut(spaceId, partId, std::move(data),
-                                     [&](nebula::cpp2::ErrorCode code) {
-            ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, code);
+                                     [&](ErrorCode code) {
+            ASSERT_EQ(ErrorCode::SUCCEEDED, code);
             baton.post();
             folly::doNotOptimizeAway(code);
         });
         baton.wait();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, env->kvstore_->flush(spaceId));
+        ASSERT_EQ(ErrorCode::SUCCEEDED, env->kvstore_->flush(spaceId));
     }
 }
 
@@ -58,7 +58,7 @@ void testPrefixSeek(StorageEnv* env, int32_t partCount, int32_t iters) {
                     NebulaKeyUtils::vertexPrefix(vIdLen, partId, std::to_string(vertexId));
                 std::unique_ptr<kvstore::KVIterator> iter;
                 auto code = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-                ASSERT_EQ(code, nebula::cpp2::ErrorCode::SUCCEEDED);
+                ASSERT_EQ(code, ErrorCode::SUCCEEDED);
                 CHECK(iter->valid());
                 iter->next();
             }

@@ -24,7 +24,7 @@ private:
     explicit AddZoneProcessor(kvstore::KVStore* kvstore)
         : BaseProcessor<cpp2::ExecResp>(kvstore) {}
 
-    nebula::cpp2::ErrorCode checkHostNotOverlap(const std::vector<HostAddr>& nodes);
+    ErrorCode checkHostNotOverlap(const std::vector<HostAddr>& nodes);
 };
 
 }  // namespace meta

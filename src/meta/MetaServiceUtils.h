@@ -112,7 +112,7 @@ public:
 
     static LeaderParts parseLeaderValV1(folly::StringPiece val);
 
-    static std::tuple<HostAddr, int64_t, nebula::cpp2::ErrorCode>
+    static std::tuple<HostAddr, int64_t, ErrorCode>
     parseLeaderValV3(folly::StringPiece val);
 
     static std::string schemaVal(const std::string& name, const cpp2::Schema& schema);
@@ -179,7 +179,7 @@ public:
 
     static std::string assembleSegmentKey(const std::string& segment, const std::string& key);
 
-    static nebula::cpp2::ErrorCode
+    static ErrorCode
     alterColumnDefs(std::vector<cpp2::ColumnDef>& cols,
                     cpp2::SchemaProp& prop,
                     const cpp2::ColumnDef col,
@@ -188,7 +188,7 @@ public:
 
     static std::string userPrefix();
 
-    static nebula::cpp2::ErrorCode
+    static ErrorCode
     alterSchemaProp(std::vector<cpp2::ColumnDef>& cols,
                     cpp2::SchemaProp& schemaProp,
                     cpp2::SchemaProp alterSchemaProp,
@@ -354,7 +354,7 @@ public:
     static GraphSpaceID parseDefaultKeySpaceID(folly::StringPiece key);
 
     // backup
-    static ErrorOr<nebula::cpp2::ErrorCode, std::vector<std::string>> backupIndex(
+    static ErrorOr<ErrorCode, std::vector<std::string>> backupIndex(
         kvstore::KVStore* kvstore,
         const std::unordered_set<GraphSpaceID>& spaces,
         const std::string& backupName,
@@ -364,7 +364,7 @@ public:
         const std::unordered_set<GraphSpaceID>& spaces,
         std::function<GraphSpaceID(folly::StringPiece rawKey)> parseSpace);
 
-    static ErrorOr<nebula::cpp2::ErrorCode, std::vector<std::string>> backupSpaces(
+    static ErrorOr<ErrorCode, std::vector<std::string>> backupSpaces(
         kvstore::KVStore* kvstore,
         const std::unordered_set<GraphSpaceID>& spaces,
         const std::string& backupName,

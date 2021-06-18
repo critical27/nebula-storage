@@ -53,10 +53,10 @@ public:
         isEdge_ = false;
     }
 
-    nebula::cpp2::ErrorCode execute(PartitionID partId) override {
+    ErrorCode execute(PartitionID partId) override {
         data_.clear();
         auto ret = RelNode<T>::execute(partId);
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             return ret;
         }
         std::vector<kvstore::KV> data;
@@ -84,7 +84,7 @@ public:
                 }
             }
         }
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
     std::vector<kvstore::KV> moveData() {

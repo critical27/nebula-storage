@@ -223,8 +223,8 @@ TEST_F(LogCASTest, EmptyTest) {
         folly::Baton<> baton;
         leader_->atomicOpAsync([log = std::move(log)] () mutable {
             return std::string("");
-        }).thenValue([&baton] (AppendLogResult res) {
-            ASSERT_EQ(AppendLogResult::SUCCEEDED, res);
+        }).thenValue([&baton] (ErrorCode res) {
+            ASSERT_EQ(ErrorCode::SUCCEEDED, res);
             baton.post();
         });
         baton.wait();
@@ -234,8 +234,8 @@ TEST_F(LogCASTest, EmptyTest) {
         folly::Baton<> baton;
         leader_->atomicOpAsync([log = std::move(log)] () mutable {
             return folly::none;
-        }).thenValue([&baton] (AppendLogResult res) {
-            ASSERT_EQ(AppendLogResult::E_ATOMIC_OP_FAILURE, res);
+        }).thenValue([&baton] (ErrorCode res) {
+            ASSERT_EQ(ErrorCode::E_STORAGE_RAFT_ATOMIC_OP_FAILED, res);
             baton.post();
         });
         baton.wait();

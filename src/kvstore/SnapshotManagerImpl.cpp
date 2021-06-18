@@ -42,7 +42,7 @@ bool SnapshotManagerImpl::accessTable(GraphSpaceID spaceId,
                                       int64_t& totalSize) {
     std::unique_ptr<KVIterator> iter;
     auto ret = store_->prefix(spaceId, partId, prefix, &iter);
-    if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (ret != ErrorCode::SUCCEEDED) {
         LOG(INFO) << "[spaceId:" << spaceId << ", partId:" << partId << "] access prefix failed"
                   << ", error code:" << static_cast<int32_t>(ret);
         cb(data, totalCount, totalSize, raftex::SnapshotStatus::FAILED);

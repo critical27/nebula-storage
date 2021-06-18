@@ -60,7 +60,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
             auto f = processor->getFuture();
             processor->process(req);
             auto resp = std::move(f).get();
-            ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+            ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         }
         {
             std::vector<HostAddr> nodes;
@@ -74,7 +74,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
             auto f = processor->getFuture();
             processor->process(req);
             auto resp = std::move(f).get();
-            ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+            ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         }
         {
             std::vector<HostAddr> nodes;
@@ -88,7 +88,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
             auto f = processor->getFuture();
             processor->process(req);
             auto resp = std::move(f).get();
-            ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+            ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         }
         // Host have overlap
         {
@@ -103,7 +103,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
             auto f = processor->getFuture();
             processor->process(req);
             auto resp = std::move(f).get();
-            ASSERT_EQ(nebula::cpp2::ErrorCode::E_INVALID_PARM, resp.get_code());
+            ASSERT_EQ(ErrorCode::E_META_ZONE_HOST_IS_IN_OTHER_ZONE, resp.get_status().get_code());
         }
     }
     // Add Zone with empty node list
@@ -116,7 +116,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_INVALID_PARM, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_GROUP_NO_ZONES, resp.get_status().get_code());
     }
     // Add Zone with duplicate node
     {
@@ -131,7 +131,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_CONFLICT, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_ZONE_CONFLICT_HOST, resp.get_status().get_code());
     }
     // Add Zone which node not exist
     {
@@ -143,7 +143,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_INVALID_PARM, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_ZONE_NO_HOSTS, resp.get_status().get_code());
     }
     // Add Zone already existed
     {
@@ -159,7 +159,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_EXISTED, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_USER_EXISTED, resp.get_status().get_code());
     }
     // Get Zone
     {
@@ -169,7 +169,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         std::vector<HostAddr> nodes = {{"0", 0}, {"1", 1}, {"2", 2}};
         ASSERT_EQ(nodes, *resp.hosts_ref());
     }
@@ -181,7 +181,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_ZONE_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_ZONE_NOT_FOUND, resp.get_status().get_code());
     }
     // List Zones
     {
@@ -190,7 +190,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(3, (*resp.zones_ref()).size());
         ASSERT_EQ("zone_0", (*resp.zones_ref())[0].get_zone_name());
         ASSERT_EQ("zone_1", (*resp.zones_ref())[1].get_zone_name());
@@ -206,7 +206,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Add host into zone overlap with another zone
     {
@@ -218,7 +218,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_EXISTED, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_ZONE_EXISTED, resp.get_status().get_code());
     }
     // Add host into zone which zone is not exist
     {
@@ -230,7 +230,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_ZONE_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_ZONE_NOT_FOUND, resp.get_status().get_code());
     }
     // Add host into zone which the node have existed
     {
@@ -242,7 +242,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_EXISTED, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_ZONE_EXISTED, resp.get_status().get_code());
     }
     // Add host into zone which the node not existed
     {
@@ -254,7 +254,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_INVALID_PARM, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_ZONE_HOST_NOT_FOUND, resp.get_status().get_code());
     }
     // Drop host from zone
     {
@@ -266,7 +266,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Drop host from zone which zone is not exist
     {
@@ -278,7 +278,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_ZONE_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_ZONE_NOT_FOUND, resp.get_status().get_code());
     }
     // Drop host from zone which the node not exist
     {
@@ -290,7 +290,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND, resp.get_status().get_code());
     }
     // Add Group
     {
@@ -302,7 +302,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Add Group which zone not exist
     {
@@ -315,7 +315,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_ZONE_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_ZONE_NOT_FOUND, resp.get_status().get_code());
     }
     // Group already existed
     {
@@ -327,7 +327,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_EXISTED, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_GROUP_EXISTED, resp.get_status().get_code());
     }
     // Group already existed although the order is different
     {
@@ -339,7 +339,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_EXISTED, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_GROUP_EXISTED, resp.get_status().get_code());
     }
     // Add Group with empty zone name list
     {
@@ -351,7 +351,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_INVALID_PARM, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_GROUP_NO_ZONES, resp.get_status().get_code());
     }
     // Add Group with duplicate zone name
     {
@@ -363,7 +363,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_CONFLICT, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_GROUP_CONFLICT_ZONE, resp.get_status().get_code());
     }
     // Add Group name already existed
     {
@@ -375,7 +375,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_EXISTED, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_GROUP_EXISTED, resp.get_status().get_code());
     }
     {
         cpp2::AddGroupReq req;
@@ -386,7 +386,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Get Group
     {
@@ -396,7 +396,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(3, resp.get_zone_names().size());
         std::vector<std::string> zones = {"zone_0", "zone_1", "zone_2"};
         ASSERT_EQ(zones, resp.get_zone_names());
@@ -409,7 +409,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_GROUP_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_GROUP_NOT_FOUND, resp.get_status().get_code());
     }
     // List Groups
     {
@@ -418,7 +418,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(2, resp.get_groups().size());
         ASSERT_EQ("group_0", resp.get_groups()[0].get_group_name());
         ASSERT_EQ("group_1", resp.get_groups()[1].get_group_name());
@@ -435,7 +435,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Add zone into group
     {
@@ -446,7 +446,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Add zone into group which group not exist
     {
@@ -457,7 +457,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_GROUP_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_GROUP_NOT_FOUND, resp.get_status().get_code());
     }
     // Add zone into group which zone already exist
     {
@@ -468,7 +468,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_EXISTED, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_GROUP_EXISTED, resp.get_status().get_code());
     }
     // Add zone into group which zone not exist
     {
@@ -479,7 +479,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_ZONE_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_ZONE_NOT_FOUND, resp.get_status().get_code());
     }
     // Drop zone from group
     {
@@ -490,7 +490,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Drop zone from group which group not exist
     {
@@ -501,7 +501,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_GROUP_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_GROUP_NOT_FOUND, resp.get_status().get_code());
     }
     // Drop zone from group which zone not exist
     {
@@ -512,7 +512,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_ZONE_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_ZONE_NOT_FOUND, resp.get_status().get_code());
     }
     // Drop Group
     {
@@ -522,7 +522,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Drop Group which is not exist
     {
@@ -532,7 +532,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_GROUP_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_GROUP_NOT_FOUND, resp.get_status().get_code());
     }
     // Drop Zone belong to a group
     {
@@ -542,7 +542,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_NOT_DROP, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_ZONE_STILL_BIND_TO_GROUP, resp.get_status().get_code());
     }
     {
         cpp2::DropGroupReq req;
@@ -551,7 +551,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Drop Zone
     {
@@ -561,7 +561,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Drop Zone which is not exist
     {
@@ -571,7 +571,7 @@ TEST(GroupAndZoneTest, GroupAndZoneTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_ZONE_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_ZONE_NOT_FOUND, resp.get_status().get_code());
     }
 }
 

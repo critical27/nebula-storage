@@ -112,7 +112,7 @@ public:
 
     std::unique_ptr<WriteBatch> startBatchWrite() override;
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     commitBatchWrite(std::unique_ptr<WriteBatch> batch,
                      bool disableWAL,
                      bool sync) override;
@@ -120,20 +120,20 @@ public:
     /*********************
      * Data retrieval
      ********************/
-    nebula::cpp2::ErrorCode get(const std::string& key, std::string* value) override;
+    ErrorCode get(const std::string& key, std::string* value) override;
 
     std::vector<Status> multiGet(const std::vector<std::string>& keys,
                                  std::vector<std::string>* values) override;
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     range(const std::string& start,
           const std::string& end,
           std::unique_ptr<KVIterator>* iter) override;
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     prefix(const std::string& prefix, std::unique_ptr<KVIterator>* iter) override;
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     rangeWithPrefix(const std::string& start,
                     const std::string& prefix,
                     std::unique_ptr<KVIterator>* iter) override;
@@ -141,15 +141,15 @@ public:
     /*********************
      * Data modification
      ********************/
-    nebula::cpp2::ErrorCode put(std::string key, std::string value) override;
+    ErrorCode put(std::string key, std::string value) override;
 
-    nebula::cpp2::ErrorCode multiPut(std::vector<KV> keyValues) override;
+    ErrorCode multiPut(std::vector<KV> keyValues) override;
 
-    nebula::cpp2::ErrorCode remove(const std::string& key) override;
+    ErrorCode remove(const std::string& key) override;
 
-    nebula::cpp2::ErrorCode multiRemove(std::vector<std::string> keys) override;
+    ErrorCode multiRemove(std::vector<std::string> keys) override;
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     removeRange(const std::string& start, const std::string& end) override;
 
     /*********************
@@ -163,25 +163,25 @@ public:
 
     int32_t totalPartsNum() override;
 
-    nebula::cpp2::ErrorCode ingest(const std::vector<std::string>& files,
+    ErrorCode ingest(const std::vector<std::string>& files,
                                    bool verifyFileChecksum = false) override;
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     setOption(const std::string& configKey, const std::string& configValue) override;
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     setDBOption(const std::string& configKey, const std::string& configValue) override;
 
-    nebula::cpp2::ErrorCode compact() override;
+    ErrorCode compact() override;
 
-    nebula::cpp2::ErrorCode flush() override;
+    ErrorCode flush() override;
 
     /*********************
      * Checkpoint operation
      ********************/
-    nebula::cpp2::ErrorCode createCheckpoint(const std::string& path) override;
+    ErrorCode createCheckpoint(const std::string& path) override;
 
-    ErrorOr<nebula::cpp2::ErrorCode, std::string>
+    ErrorOr<ErrorCode, std::string>
     backupTable(const std::string& path,
                 const std::string& tablePrefix,
                 std::function<bool(const folly::StringPiece& key)> filter) override;

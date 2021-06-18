@@ -24,14 +24,14 @@ class AdminSubTask {
 public:
     AdminSubTask() = default;
 
-    explicit AdminSubTask(std::function<nebula::cpp2::ErrorCode()> f) : run_(f) {}
+    explicit AdminSubTask(std::function<ErrorCode()> f) : run_(f) {}
 
-    nebula::cpp2::ErrorCode invoke() {
+    ErrorCode invoke() {
         return run_();
     }
 
 private:
-    std::function<nebula::cpp2::ErrorCode()> run_;
+    std::function<ErrorCode()> run_;
 };
 
 enum class TaskPriority : int8_t {
@@ -41,7 +41,7 @@ enum class TaskPriority : int8_t {
 };
 
 struct TaskContext {
-    using CallBack = std::function<void(nebula::cpp2::ErrorCode, nebula::meta::cpp2::StatisItem&)>;
+    using CallBack = std::function<void(ErrorCode, nebula::meta::cpp2::StatisItem&)>;
 
     TaskContext() = default;
     TaskContext(const cpp2::AddAdminTaskRequest& req,
@@ -62,7 +62,7 @@ struct TaskContext {
 };
 
 class AdminTask {
-    using TCallBack = std::function<void(nebula::cpp2::ErrorCode,
+    using TCallBack = std::function<void(ErrorCode,
                                          nebula::meta::cpp2::StatisItem&)>;
     using SubTaskQueue = folly::UnboundedBlockingQueue<AdminSubTask>;
 
@@ -71,7 +71,7 @@ public:
 
     explicit AdminTask(StorageEnv* env, TaskContext&& ctx) : env_(env), ctx_(ctx) {}
 
-    virtual ErrorOr<nebula::cpp2::ErrorCode, std::vector<AdminSubTask>>
+    virtual ErrorOr<ErrorCode, std::vector<AdminSubTask>>
     genSubTasks() = 0;
 
     virtual ~AdminTask() {}
@@ -88,7 +88,7 @@ public:
         finish(rc_);
     }
 
-    virtual void finish(nebula::cpp2::ErrorCode rc) {
+    virtual void finish(ErrorCode rc) {
         FLOG_INFO("task(%d, %d) finished, rc=[%s]", ctx_.jobId_, ctx_.taskId_,
                   apache::thrift::util::enumNameSafe(rc).c_str());
         nebula::meta::cpp2::StatisItem statisItem;
@@ -113,19 +113,19 @@ public:
         return ctx_.concurrentReq_;
     }
 
-    virtual nebula::cpp2::ErrorCode status() const {
+    virtual ErrorCode status() const {
         return rc_;
     }
 
-    virtual void subTaskFinish(nebula::cpp2::ErrorCode rc) {
-        auto suc = nebula::cpp2::ErrorCode::SUCCEEDED;
+    virtual void subTaskFinish(ErrorCode rc) {
+        auto suc = ErrorCode::SUCCEEDED;
         rc_.compare_exchange_strong(suc, rc);
     }
 
     virtual void cancel() {
         FLOG_INFO("task(%d, %d) cancelled", ctx_.jobId_, ctx_.taskId_);
-        auto suc = nebula::cpp2::ErrorCode::SUCCEEDED;
-        rc_.compare_exchange_strong(suc, nebula::cpp2::ErrorCode::E_USER_CANCEL);
+        auto suc = ErrorCode::SUCCEEDED;
+        rc_.compare_exchange_strong(suc, ErrorCode::E_STORAGE_TASK_USER_CANCELED);
     }
 
 public:
@@ -135,7 +135,7 @@ public:
 protected:
     StorageEnv*                             env_;
     TaskContext                             ctx_;
-    std::atomic<nebula::cpp2::ErrorCode>    rc_{nebula::cpp2::ErrorCode::SUCCEEDED};
+    std::atomic<ErrorCode>    rc_{ErrorCode::SUCCEEDED};
 };
 
 class AdminTaskFactory {

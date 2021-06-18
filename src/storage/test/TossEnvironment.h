@@ -173,7 +173,7 @@ struct TossEnvironment {
         return e;
     }
 
-    nebula::cpp2::ErrorCode syncAddMultiEdges(std::vector<cpp2::NewEdge>& edges, bool useToss) {
+    ErrorCode syncAddMultiEdges(std::vector<cpp2::NewEdge>& edges, bool useToss) {
         bool retLeaderChange = false;
         int32_t retry = 0;
         int32_t retryMax = 10;
@@ -186,7 +186,7 @@ struct TossEnvironment {
             auto f = addEdgesAsync(edges, useToss);
             f.wait();
             if (!f.valid()) {
-                auto retcode = nebula::cpp2::ErrorCode::E_UNKNOWN;
+                auto retcode = ErrorCode::E_UNKNOWN;
                 LOG(INFO) << apache::thrift::util::enumNameSafe(retcode);
                 return retcode;
             }
@@ -196,7 +196,7 @@ struct TossEnvironment {
                 for (auto& part : f.value().failedParts()) {
                     LOG(INFO) << "partId=" << part.first
                               << ", ec=" << apache::thrift::util::enumNameSafe(part.second);
-                    if (part.second == nebula::cpp2::ErrorCode::E_LEADER_CHANGED) {
+                    if (part.second == ErrorCode::E_LEADER_CHANGED) {
                         retLeaderChange = true;
                     }
                 }
@@ -208,7 +208,7 @@ struct TossEnvironment {
                 auto& respComn = execResp.get_result();
                 auto& failedParts = respComn.get_failed_parts();
                 for (auto& part : failedParts) {
-                    if (part.code == nebula::cpp2::ErrorCode::E_LEADER_CHANGED) {
+                    if (part.code == ErrorCode::E_LEADER_CHANGED) {
                         retLeaderChange = true;
                         LOG(INFO) << "addEdgeAsync() !f.value().succeeded(), retry";
                     }
@@ -221,10 +221,10 @@ struct TossEnvironment {
             }
         } while (retLeaderChange);
         LOG(INFO) << "addEdgeAsync() succeeded";
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
-    nebula::cpp2::ErrorCode syncAddEdge(const cpp2::NewEdge& edge, bool useToss = true) {
+    ErrorCode syncAddEdge(const cpp2::NewEdge& edge, bool useToss = true) {
         std::vector<cpp2::NewEdge> edges{edge};
         return syncAddMultiEdges(edges, useToss);
     }
@@ -289,7 +289,7 @@ struct TossEnvironment {
                 for (auto& p : rpcResp.failedParts()) {
                     LOG(INFO) << "failedPart: " << p.first
                               << ", err=" << apache::thrift::util::enumNameSafe(p.second);
-                    if (p.second == nebula::cpp2::ErrorCode::E_LEADER_CHANGED) {
+                    if (p.second == ErrorCode::E_LEADER_CHANGED) {
                         needRetry = true;
                         continue;
                     }
@@ -409,7 +409,7 @@ struct TossEnvironment {
             }
             auto parts = f.value().failedParts();
             for (auto& part : parts) {
-                if (part.second == nebula::cpp2::ErrorCode::E_LEADER_CHANGED) {
+                if (part.second == ErrorCode::E_LEADER_CHANGED) {
                     retLeaderChange = true;
                     break;
                 }
@@ -624,7 +624,7 @@ struct TossEnvironment {
         auto sf = interClient_->forwardTransaction(txnId, spaceId_, partId, std::move(batch));
         sf.wait();
 
-        if (sf.value() != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (sf.value() != ErrorCode::SUCCEEDED) {
             LOG(FATAL) << "forward txn return=" << apache::thrift::util::enumNameSafe(sf.value());
         }
     }
@@ -644,24 +644,24 @@ struct TossEnvironment {
                              const std::vector<std::string>& propNames,
                              const std::vector<Value>& props) {
         RowWriterV2 rowWrite(schema);
-        WriteResult wRet;
+        ErrorCode wRet;
         if (!propNames.empty()) {
             for (size_t i = 0; i < propNames.size(); i++) {
                 wRet = rowWrite.setValue(propNames[i], props[i]);
-                if (wRet != WriteResult::SUCCEEDED) {
+                if (wRet != ErrorCode::SUCCEEDED) {
                     LOG(FATAL) << "Add field faild";
                 }
             }
         } else {
             for (size_t i = 0; i < props.size(); i++) {
                 wRet = rowWrite.setValue(i, props[i]);
-                if (wRet != WriteResult::SUCCEEDED) {
+                if (wRet != ErrorCode::SUCCEEDED) {
                     LOG(FATAL) << "Add field faild";
                 }
             }
         }
         wRet = rowWrite.finish();
-        if (wRet != WriteResult::SUCCEEDED) {
+        if (wRet != ErrorCode::SUCCEEDED) {
             LOG(FATAL) << "Add field faild";
         }
 

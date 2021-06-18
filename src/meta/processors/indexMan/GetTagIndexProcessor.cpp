@@ -31,8 +31,8 @@ void GetTagIndexProcessor::process(const cpp2::GetTagIndexReq& req) {
     auto indexItemRet = doGet(indexKey);
     if (!nebula::ok(indexItemRet)) {
         auto retCode = nebula::error(indexItemRet);
-        if (retCode == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
-            retCode = nebula::cpp2::ErrorCode::E_INDEX_NOT_FOUND;
+        if (retCode == ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND) {
+            retCode = ErrorCode::E_META_INDEX_NOT_FOUND;
         }
         LOG(ERROR) << "Get Tag Index Failed: SpaceID " << spaceID << " Index Name: " << indexName
                    << " error: " << apache::thrift::util::enumNameSafe(retCode);
@@ -44,12 +44,12 @@ void GetTagIndexProcessor::process(const cpp2::GetTagIndexReq& req) {
     auto item = MetaServiceUtils::parseIndex(nebula::value(indexItemRet));
     if (item.get_schema_id().getType() != cpp2::SchemaID::Type::tag_id) {
         LOG(ERROR) << "Get Tag Index Failed: Index Name " << indexName << " is not TagIndex";
-        resp_.set_code(nebula::cpp2::ErrorCode::E_INDEX_NOT_FOUND);
+        resp_.set_code(ErrorCode::E_META_INDEX_NOT_FOUND);
         onFinished();
         return;
     }
 
-    handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
+    handleErrorCode(ErrorCode::SUCCEEDED);
     resp_.set_item(std::move(item));
     onFinished();
 }

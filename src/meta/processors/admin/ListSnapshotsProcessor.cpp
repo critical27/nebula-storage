@@ -37,7 +37,7 @@ void ListSnapshotsProcessor::process(const cpp2::ListSnapshotsReq&) {
         iter->next();
     }
 
-    handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
+    handleErrorCode(ErrorCode::SUCCEEDED);
     resp_.set_snapshots(std::move(snapshots));
     onFinished();
 }

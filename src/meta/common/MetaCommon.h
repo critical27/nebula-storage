@@ -34,19 +34,19 @@ public:
         std::vector<kvstore::KV> status{std::make_pair(std::move(statusKey),
                                                        std::forward<std::string>(statusValue))};
         folly::Baton<true, std::atomic> baton;
-        auto ret = nebula::cpp2::ErrorCode::SUCCEEDED;
+        auto ret = ErrorCode::SUCCEEDED;
         kvstore->asyncMultiPut(kDefaultSpaceId,
                                kDefaultPartId,
                                std::move(status),
-                               [&ret, &baton] (nebula::cpp2::ErrorCode code) {
-                                   if (nebula::cpp2::ErrorCode::SUCCEEDED != code) {
+                               [&ret, &baton] (ErrorCode code) {
+                                   if (ErrorCode::SUCCEEDED != code) {
                                        ret = code;
                                        LOG(INFO) << "Put data error on meta server";
                                    }
                                    baton.post();
                                });
         baton.wait();
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             LOG(ERROR) << "Save Status Failed";
             return false;
         }

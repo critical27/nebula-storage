@@ -10,35 +10,9 @@ namespace nebula {
 namespace storage {
 
 template <typename RESP>
-nebula::cpp2::ErrorCode
-BaseProcessor<RESP>::writeResultTo(WriteResult code, bool isEdge) {
-    switch (code) {
-    case WriteResult::SUCCEEDED:
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
-    case WriteResult::UNKNOWN_FIELD:
-        if (isEdge) {
-            return nebula::cpp2::ErrorCode::E_EDGE_PROP_NOT_FOUND;
-        }
-        return nebula::cpp2::ErrorCode::E_TAG_PROP_NOT_FOUND;
-    case WriteResult::NOT_NULLABLE:
-        return nebula::cpp2::ErrorCode::E_NOT_NULLABLE;
-    case WriteResult::TYPE_MISMATCH:
-        return nebula::cpp2::ErrorCode::E_DATA_TYPE_MISMATCH;
-    case WriteResult::FIELD_UNSET:
-        return nebula::cpp2::ErrorCode::E_FIELD_UNSET;
-    case WriteResult::OUT_OF_RANGE:
-        return nebula::cpp2::ErrorCode::E_OUT_OF_RANGE;
-    case WriteResult::INCORRECT_VALUE:
-        return nebula::cpp2::ErrorCode::E_INVALID_FIELD_VALUE;
-    default:
-        return nebula::cpp2::ErrorCode::E_UNKNOWN;
-    }
-}
-
-template <typename RESP>
 void BaseProcessor<RESP>::handleAsync(GraphSpaceID spaceId,
                                       PartitionID partId,
-                                      nebula::cpp2::ErrorCode code) {
+                                      ErrorCode code) {
     VLOG(3) << "partId:" << partId << ", code: " << static_cast<int32_t>(code);
 
     bool finished = false;
@@ -66,10 +40,10 @@ BaseProcessor<RESP>::columnDef(std::string name, meta::cpp2::PropertyType type) 
 }
 
 template <typename RESP>
-void BaseProcessor<RESP>::pushResultCode(nebula::cpp2::ErrorCode code,
+void BaseProcessor<RESP>::pushResultCode(ErrorCode code,
                                          PartitionID partId,
                                          HostAddr leader) {
-    if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (code != ErrorCode::SUCCEEDED) {
         cpp2::PartitionResult thriftRet;
         thriftRet.set_code(code);
         thriftRet.set_part_id(partId);
@@ -81,11 +55,11 @@ void BaseProcessor<RESP>::pushResultCode(nebula::cpp2::ErrorCode code,
 }
 
 template <typename RESP>
-void BaseProcessor<RESP>::handleErrorCode(nebula::cpp2::ErrorCode code,
+void BaseProcessor<RESP>::handleErrorCode(ErrorCode code,
                                           GraphSpaceID spaceId,
                                           PartitionID partId) {
-    if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
-        if (code == nebula::cpp2::ErrorCode::E_LEADER_CHANGED) {
+    if (code != ErrorCode::SUCCEEDED) {
+        if (code == ErrorCode::E_LEADER_CHANGED) {
             handleLeaderChanged(spaceId, partId);
         } else {
             pushResultCode(code, partId);
@@ -99,7 +73,7 @@ void BaseProcessor<RESP>::handleLeaderChanged(GraphSpaceID spaceId,
     auto addrRet = env_->kvstore_->partLeader(spaceId, partId);
     if (ok(addrRet)) {
         auto leader = value(std::move(addrRet));
-        this->pushResultCode(nebula::cpp2::ErrorCode::E_LEADER_CHANGED, partId, leader);
+        this->pushResultCode(ErrorCode::E_LEADER_CHANGED, partId, leader);
     } else {
         LOG(ERROR) << "Fail to get part leader, spaceId: " << spaceId
                    << ", partId: " << partId << ", ResultCode: "
@@ -113,23 +87,23 @@ void BaseProcessor<RESP>::doPut(GraphSpaceID spaceId,
                                 PartitionID partId,
                                 std::vector<kvstore::KV>&& data) {
     this->env_->kvstore_->asyncMultiPut(
-        spaceId, partId, std::move(data), [spaceId, partId, this](nebula::cpp2::ErrorCode code) {
+        spaceId, partId, std::move(data), [spaceId, partId, this](ErrorCode code) {
             handleAsync(spaceId, partId, code);
     });
 }
 
 template <typename RESP>
-nebula::cpp2::ErrorCode
+ErrorCode
 BaseProcessor<RESP>::doSyncPut(GraphSpaceID spaceId,
                                PartitionID partId,
                                std::vector<kvstore::KV>&& data) {
     folly::Baton<true, std::atomic> baton;
-    auto ret = nebula::cpp2::ErrorCode::SUCCEEDED;
+    auto ret = ErrorCode::SUCCEEDED;
     env_->kvstore_->asyncMultiPut(spaceId,
                                   partId,
                                   std::move(data),
-                                  [&ret, &baton] (nebula::cpp2::ErrorCode code) {
-        if (nebula::cpp2::ErrorCode::SUCCEEDED != code) {
+                                  [&ret, &baton] (ErrorCode code) {
+        if (ErrorCode::SUCCEEDED != code) {
             ret = code;
         }
         baton.post();
@@ -143,7 +117,7 @@ void BaseProcessor<RESP>::doRemove(GraphSpaceID spaceId,
                                    PartitionID partId,
                                    std::vector<std::string>&& keys) {
     this->env_->kvstore_->asyncMultiRemove(
-        spaceId, partId, std::move(keys), [spaceId, partId, this](nebula::cpp2::ErrorCode code) {
+        spaceId, partId, std::move(keys), [spaceId, partId, this](ErrorCode code) {
         handleAsync(spaceId, partId, code);
     });
 }
@@ -154,39 +128,38 @@ void BaseProcessor<RESP>::doRemoveRange(GraphSpaceID spaceId,
                                         const std::string& start,
                                         const std::string& end) {
     this->env_->kvstore_->asyncRemoveRange(
-        spaceId, partId, start, end, [spaceId, partId, this](nebula::cpp2::ErrorCode code) {
+        spaceId, partId, start, end, [spaceId, partId, this](ErrorCode code) {
             handleAsync(spaceId, partId, code);
         });
 }
 
 template <typename RESP>
-StatusOr<std::string>
+ErrorOr<ErrorCode, std::string>
 BaseProcessor<RESP>::encodeRowVal(const meta::NebulaSchemaProvider* schema,
                                   const std::vector<std::string>& propNames,
-                                  const std::vector<Value>& props,
-                                  WriteResult& wRet) {
+                                  const std::vector<Value>& props) {
     RowWriterV2 rowWrite(schema);
     // If req.prop_names is not empty, use the property name in req.prop_names
     // Otherwise, use property name in schema
     if (!propNames.empty()) {
         for (size_t i = 0; i < propNames.size(); i++) {
             wRet = rowWrite.setValue(propNames[i], props[i]);
-            if (wRet != WriteResult::SUCCEEDED) {
-                return Status::Error("Add field faild");
+            if (wRet != ErrorCode::SUCCEEDED) {
+                return wRet;
             }
         }
     } else {
         for (size_t i = 0; i < props.size(); i++) {
             wRet = rowWrite.setValue(i, props[i]);
-            if (wRet != WriteResult::SUCCEEDED) {
-                return Status::Error("Add field faild");
+            if (wRet != ErrorCode::SUCCEEDED) {
+                return wRet;
             }
         }
     }
 
     wRet = rowWrite.finish();
-    if (wRet != WriteResult::SUCCEEDED) {
-        return Status::Error("Add field faild");
+    if (wRet != ErrorCode::SUCCEEDED) {
+        return wRet;
     }
 
     return std::move(rowWrite).moveEncodedStr();

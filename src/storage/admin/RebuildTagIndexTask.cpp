@@ -22,19 +22,19 @@ RebuildTagIndexTask::getIndex(GraphSpaceID space, IndexID index) {
     return env_->indexMan_->getTagIndex(space, index);
 }
 
-nebula::cpp2::ErrorCode
+ErrorCode
 RebuildTagIndexTask::buildIndexGlobal(GraphSpaceID space,
                                       PartitionID part,
                                       const IndexItems& items) {
     if (canceled_) {
         LOG(ERROR) << "Rebuild Tag Index is Canceled";
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
     auto vidSizeRet = env_->schemaMan_->getSpaceVidLen(space);
     if (!vidSizeRet.ok()) {
         LOG(ERROR) << "Get VID Size Failed";
-        return nebula::cpp2::ErrorCode::E_STORE_FAILURE;
+        return ErrorCode::E_STORAGE_INDEX_GET_SPACE_VID_LEN_FAILED;
     }
 
     std::unordered_set<TagID> tagIds;
@@ -46,7 +46,7 @@ RebuildTagIndexTask::buildIndexGlobal(GraphSpaceID space,
     std::unique_ptr<kvstore::KVIterator> iter;
     auto prefix = NebulaKeyUtils::vertexPrefix(part);
     auto ret = env_->kvstore_->prefix(space, part, prefix, &iter);
-    if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (ret != ErrorCode::SUCCEEDED) {
         LOG(ERROR) << "Processing Part " << part << " Failed";
         return ret;
     }
@@ -58,12 +58,12 @@ RebuildTagIndexTask::buildIndexGlobal(GraphSpaceID space,
     while (iter && iter->valid()) {
         if (canceled_) {
             LOG(ERROR) << "Rebuild Tag Index is Canceled";
-            return nebula::cpp2::ErrorCode::SUCCEEDED;
+            return ErrorCode::SUCCEEDED;
         }
 
         if (static_cast<int32_t>(data.size()) == FLAGS_rebuild_index_batch_num) {
             auto result = writeData(space, part, data);
-            if (result != nebula::cpp2::ErrorCode::SUCCEEDED) {
+            if (result != ErrorCode::SUCCEEDED) {
                 LOG(ERROR) << "Write Part " << part << " Index Failed";
                 return result;
             }
@@ -143,11 +143,11 @@ RebuildTagIndexTask::buildIndexGlobal(GraphSpaceID space,
     }
 
     auto result = writeData(space, part, std::move(data));
-    if (result != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (result != ErrorCode::SUCCEEDED) {
         LOG(ERROR) << "Write Part " << part << " Index Failed";
-        return nebula::cpp2::ErrorCode::E_STORE_FAILURE;
+        return ErrorCode::E_STORAGE_INDEX_WRITE_DATA_FAILED;
     }
-    return nebula::cpp2::ErrorCode::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 }  // namespace storage

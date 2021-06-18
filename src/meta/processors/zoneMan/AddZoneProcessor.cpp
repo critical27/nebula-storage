@@ -17,7 +17,7 @@ void AddZoneProcessor::process(const cpp2::AddZoneReq& req) {
     auto nodes = req.get_nodes();
     if (nodes.empty()) {
         LOG(ERROR) << "The hosts should not be empty";
-        handleErrorCode(nebula::cpp2::ErrorCode::E_INVALID_PARM);
+        handleErrorCode(ErrorCode::E_META_ZONE_NO_HOSTS);
         onFinished();
         return;
     }
@@ -25,7 +25,7 @@ void AddZoneProcessor::process(const cpp2::AddZoneReq& req) {
     std::set<HostAddr> nodeSet(nodes.begin(), nodes.end());
     if (nodes.size() != nodeSet.size()) {
         LOG(ERROR) << "Conflict host found in the zone";
-        handleErrorCode(nebula::cpp2::ErrorCode::E_CONFLICT);
+        handleErrorCode(ErrorCode::E_META_ZONE_CONFLICT_HOST);
         onFinished();
         return;
     }
@@ -44,7 +44,7 @@ void AddZoneProcessor::process(const cpp2::AddZoneReq& req) {
     std::sort(activeHosts.begin(), activeHosts.end());
     if (!std::includes(activeHosts.begin(), activeHosts.end(), nodeSet.begin(), nodeSet.end())) {
         LOG(ERROR) << "Host not exist";
-        handleErrorCode(nebula::cpp2::ErrorCode::E_INVALID_PARM);
+        handleErrorCode(ErrorCode::E_META_ZONE_HOST_NOT_FOUND);
         onFinished();
         return;
     }
@@ -52,12 +52,12 @@ void AddZoneProcessor::process(const cpp2::AddZoneReq& req) {
     auto zoneIdRet = getZoneId(zoneName);
     if (nebula::ok(zoneIdRet)) {
         LOG(ERROR) << "Zone " << zoneName  << " already existed";
-        handleErrorCode(nebula::cpp2::ErrorCode::E_EXISTED);
+        handleErrorCode(ErrorCode::E_META_ZONE_EXISTED);
         onFinished();
         return;
     } else {
         auto retCode = nebula::error(zoneIdRet);
-        if (retCode != nebula::cpp2::ErrorCode::E_ZONE_NOT_FOUND) {
+        if (retCode != ErrorCode::E_META_ZONE_NOT_FOUND) {
             LOG(ERROR) << "Create zone failed, zone name " << zoneName << " error: "
                        << apache::thrift::util::enumNameSafe(retCode);
             handleErrorCode(retCode);
@@ -68,7 +68,7 @@ void AddZoneProcessor::process(const cpp2::AddZoneReq& req) {
 
     // Check the node is not include in another zone
     auto retCode = checkHostNotOverlap(nodes);
-    if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (retCode != ErrorCode::SUCCEEDED) {
         handleErrorCode(retCode);
         onFinished();
         return;
@@ -93,7 +93,7 @@ void AddZoneProcessor::process(const cpp2::AddZoneReq& req) {
     doSyncPutAndUpdate(std::move(data));
 }
 
-nebula::cpp2::ErrorCode
+ErrorCode
 AddZoneProcessor::checkHostNotOverlap(const std::vector<HostAddr>& nodes) {
     const auto& prefix = MetaServiceUtils::zonePrefix();
     auto iterRet = doPrefix(prefix);
@@ -111,12 +111,12 @@ AddZoneProcessor::checkHostNotOverlap(const std::vector<HostAddr>& nodes) {
             auto hostIter = std::find(hosts.begin(), hosts.end(), node);
             if (hostIter != hosts.end()) {
                 LOG(ERROR) << "Host overlap found in zone " << zoneName;
-                return nebula::cpp2::ErrorCode::E_INVALID_PARM;
+                return ErrorCode::E_META_ZONE_HOST_IS_IN_OTHER_ZONE;
             }
         }
         iter->next();
     }
-    return nebula::cpp2::ErrorCode::SUCCEEDED;
+    return ErrorCode::SUCCEEDED;
 }
 
 }  // namespace meta

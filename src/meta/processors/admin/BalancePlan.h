@@ -60,7 +60,7 @@ public:
         return status_;
     }
 
-    nebula::cpp2::ErrorCode saveInStore(bool onlyPlan = false);
+    ErrorCode saveInStore(bool onlyPlan = false);
 
     BalanceID id() const {
         return id_;
@@ -80,7 +80,7 @@ public:
     }
 
 private:
-    nebula::cpp2::ErrorCode recovery(bool resume = true);
+    ErrorCode recovery(bool resume = true);
 
     void dispatchTasks();
 

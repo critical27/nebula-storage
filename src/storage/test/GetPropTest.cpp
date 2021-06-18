@@ -587,7 +587,7 @@ TEST(QueryVertexPropsTest, PrefixBloomFilterTest) {
         std::unique_ptr<kvstore::KVIterator> iter;
         auto prefix = NebulaKeyUtils::vertexPrefix(vIdLen, partId, vId);
         auto code = env->kvstore_->prefix(spaceId, partId, prefix, &iter);
-        ASSERT_EQ(code, nebula::cpp2::ErrorCode::SUCCEEDED);
+        ASSERT_EQ(code, ErrorCode::SUCCEEDED);
     }
 
     std::shared_ptr<rocksdb::Statistics> statistics = kvstore::getDBStatistics();

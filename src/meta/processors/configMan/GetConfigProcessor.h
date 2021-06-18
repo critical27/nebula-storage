@@ -21,7 +21,7 @@ public:
     void process(const cpp2::GetConfigReq& req);
 
 private:
-    nebula::cpp2::ErrorCode
+    ErrorCode
     getOneConfig(const cpp2::ConfigModule& module,
                  const std::string& name,
                  std::vector<cpp2::ConfigItem>& items);

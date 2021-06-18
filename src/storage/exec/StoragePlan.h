@@ -34,7 +34,7 @@ FutureDAG in StorageDAGBenchmark.cpp
 template<typename T>
 class StoragePlan {
 public:
-    nebula::cpp2::ErrorCode go(PartitionID partId, const T& input) {
+    ErrorCode go(PartitionID partId, const T& input) {
         // find all leaf nodes, and a dummy output node depends on all leaf node.
         if (firstLoop_) {
             auto output = std::make_unique<RelNode<T>>();
@@ -52,7 +52,7 @@ public:
         return nodes_[outputIdx_]->execute(partId, input);
     }
 
-    nebula::cpp2::ErrorCode go(PartitionID partId) {
+    ErrorCode go(PartitionID partId) {
         // find all leaf nodes, and a dummy output node depends on all leaf node.
         if (firstLoop_) {
             auto output = std::make_unique<RelNode<T>>();

@@ -33,21 +33,6 @@ class FileBasedWal;
 
 namespace raftex {
 
-enum class AppendLogResult {
-    SUCCEEDED = 0,
-    E_ATOMIC_OP_FAILURE = -1,
-    E_NOT_A_LEADER = -2,
-    E_STOPPED = -3,
-    E_NOT_READY = -4,
-    E_BUFFER_OVERFLOW = -5,
-    E_WAL_FAILURE = -6,
-    E_TERM_OUT_OF_DATE = -7,
-    E_SENDING_SNAPSHOT = -8,
-    E_INVALID_PEER = -9,
-    E_NOT_ENOUGH_ACKS = -10,
-    E_WRITE_BLOCKING = -11,
-};
-
 enum class LogType {
     NORMAL      = 0x00,
     ATOMIC_OP   = 0x01,
@@ -174,23 +159,23 @@ public:
      *
      * If the source == -1, the current clusterId will be used
      ****************************************************************/
-    folly::Future<AppendLogResult> appendAsync(ClusterID source, std::string log);
+    folly::Future<ErrorCode> appendAsync(ClusterID source, std::string log);
 
     /****************************************************************
      * Run the op atomically.
      ***************************************************************/
-    folly::Future<AppendLogResult> atomicOpAsync(AtomicOp op);
+    folly::Future<ErrorCode> atomicOpAsync(AtomicOp op);
 
     /**
      * Asynchronously send one command.
      * */
-    folly::Future<AppendLogResult> sendCommandAsync(std::string log);
+    folly::Future<ErrorCode> sendCommandAsync(std::string log);
 
     /**
      * Check if the peer has catched up data from leader. If leader is sending the snapshot,
      * the method will return false.
      * */
-    AppendLogResult isCatchedUp(const HostAddr& peer);
+    ErrorCode isCatchedUp(const HostAddr& peer);
 
     bool linkCurrentWAL(const char* newPath);
 
@@ -345,7 +330,7 @@ private:
      * Asynchronously send a heartbeat (An empty log entry)
      *
      ****************************************************************/
-    folly::Future<AppendLogResult> sendHeartbeat();
+    folly::Future<ErrorCode> sendHeartbeat();
 
     /****************************************************
      *
@@ -380,9 +365,9 @@ private:
 
     // Check whether new logs can be appended
     // Pre-condition: The caller needs to hold the raftLock_
-    AppendLogResult canAppendLogs();
+    ErrorCode canAppendLogs();
 
-    folly::Future<AppendLogResult> appendLogAsync(ClusterID source,
+    folly::Future<ErrorCode> appendLogAsync(ClusterID source,
                                                   LogType logType,
                                                   std::string log,
                                                   AtomicOp cb = nullptr);
@@ -412,7 +397,7 @@ private:
     // followers return Host of which could vote, in other words, learner is not counted in
     std::vector<std::shared_ptr<Host>> followers() const;
 
-    bool checkAppendLogResult(AppendLogResult res);
+    bool checkAppendLogResult(ErrorCode res);
 
     void updateQuorum();
 
@@ -511,13 +496,13 @@ protected:
     mutable std::mutex logsLock_;
     std::atomic_bool replicatingLogs_{false};
     std::atomic_bool bufferOverFlow_{false};
-    PromiseSet<AppendLogResult> cachingPromise_;
+    PromiseSet<ErrorCode> cachingPromise_;
     LogCache logs_;
 
     // Partition level lock to synchronize the access of the partition
     mutable std::mutex raftLock_;
 
-    PromiseSet<AppendLogResult> sendingPromise_;
+    PromiseSet<ErrorCode> sendingPromise_;
 
     Status status_;
     Role role_;

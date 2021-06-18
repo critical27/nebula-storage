@@ -44,7 +44,7 @@ void AlterTagProcessor::process(const cpp2::AlterTagReq& req) {
     if (!iter->valid()) {
         LOG(ERROR) << "Tag could not be found, spaceId " << spaceId
                    << ", tagname: " << tagName;
-        handleErrorCode(nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND);
+        handleErrorCode(ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND);
         onFinished();
         return;
     }
@@ -69,7 +69,7 @@ void AlterTagProcessor::process(const cpp2::AlterTagReq& req) {
     auto existIndex = !indexes.empty();
     if (existIndex) {
         auto iStatus = indexCheck(indexes, tagItems);
-        if (iStatus != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (iStatus != ErrorCode::SUCCEEDED) {
             LOG(ERROR) << "Alter tag error, index conflict : "
                        << apache::thrift::util::enumNameSafe(iStatus);
             handleErrorCode(iStatus);
@@ -91,7 +91,7 @@ void AlterTagProcessor::process(const cpp2::AlterTagReq& req) {
         }
         if (!col.empty() && duration > 0) {
             LOG(ERROR) << "Alter tag error, index and ttl conflict";
-            handleErrorCode(nebula::cpp2::ErrorCode::E_UNSUPPORTED);
+            handleErrorCode(ErrorCode::E_META_SCHEMA_CHANGE_FORBIDDEN_WHEN_HAS_TTL);
             onFinished();
             return;
         }
@@ -102,12 +102,12 @@ void AlterTagProcessor::process(const cpp2::AlterTagReq& req) {
     if (nebula::ok(ftIdxRet)) {
         auto fti = std::move(nebula::value(ftIdxRet));
         auto ftStatus = ftIndexCheck(fti.get_fields(), tagItems);
-        if (ftStatus != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ftStatus != ErrorCode::SUCCEEDED) {
             handleErrorCode(ftStatus);
             onFinished();
             return;
         }
-    } else if (nebula::error(ftIdxRet) != nebula::cpp2::ErrorCode::E_INDEX_NOT_FOUND) {
+    } else if (nebula::error(ftIdxRet) != ErrorCode::E_META_FULLTEXT_INDEX_NOT_FOUND) {
         handleErrorCode(nebula::error(ftIdxRet));
         onFinished();
         return;
@@ -117,7 +117,7 @@ void AlterTagProcessor::process(const cpp2::AlterTagReq& req) {
         auto &cols = tagItem.get_schema().get_columns();
         for (auto& col : cols) {
             auto retCode = MetaServiceUtils::alterColumnDefs(columns, prop, col, *tagItem.op_ref());
-            if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+            if (retCode != ErrorCode::SUCCEEDED) {
                 LOG(ERROR) << "Alter tag column error "
                            << apache::thrift::util::enumNameSafe(retCode);
                 handleErrorCode(retCode);
@@ -128,14 +128,14 @@ void AlterTagProcessor::process(const cpp2::AlterTagReq& req) {
     }
 
     if (!SchemaUtil::checkType(columns)) {
-        handleErrorCode(nebula::cpp2::ErrorCode::E_INVALID_PARM);
+        handleErrorCode(ErrorCode::E_META_SCHEMA_INVALID_DEFAULT_VALUE);
         onFinished();
         return;
     }
 
     // Update schema property if tag not index
     auto retCode = MetaServiceUtils::alterSchemaProp(columns, prop, alterSchemaProp, existIndex);
-    if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    if (retCode != ErrorCode::SUCCEEDED) {
         LOG(ERROR) << "Alter tag property error "
                    << apache::thrift::util::enumNameSafe(retCode);
         handleErrorCode(retCode);

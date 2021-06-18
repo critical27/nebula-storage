@@ -51,21 +51,21 @@ protected:
 
     void onProcessFinished() override;
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     checkAndBuildContexts(const cpp2::GetNeighborsRequest& req) override;
 
-    nebula::cpp2::ErrorCode buildTagContext(const cpp2::TraverseSpec& req);
-    nebula::cpp2::ErrorCode buildEdgeContext(const cpp2::TraverseSpec& req);
+    ErrorCode buildTagContext(const cpp2::TraverseSpec& req);
+    ErrorCode buildEdgeContext(const cpp2::TraverseSpec& req);
 
     // build tag/edge col name in response when prop specified
     void buildTagColName(const std::vector<cpp2::VertexProp>& tagProps);
     void buildEdgeColName(const std::vector<cpp2::EdgeProp>& edgeProps);
 
     // add PropContext of stat
-    nebula::cpp2::ErrorCode
+    ErrorCode
     handleEdgeStatProps(const std::vector<cpp2::StatProp>& statProps);
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     checkStatType(const meta::SchemaProviderIf::Field* field,
                   cpp2::StatType statType);
 

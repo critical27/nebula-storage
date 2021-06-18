@@ -27,9 +27,9 @@ public:
         , resultDataSet_(resultDataSet)
         , vertexCache_(vertexCache) {}
 
-    nebula::cpp2::ErrorCode execute(PartitionID partId, const VertexID& vId) override {
+    ErrorCode execute(PartitionID partId, const VertexID& vId) override {
         auto ret = RelNode::execute(partId, vId);
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             return ret;
         }
 
@@ -37,7 +37,7 @@ public:
         if (!std::any_of(tagNodes_.begin(), tagNodes_.end(), [] (const auto& tagNode) {
             return tagNode->valid();
         })) {
-            return nebula::cpp2::ErrorCode::SUCCEEDED;
+            return ErrorCode::SUCCEEDED;
         }
 
         List row;
@@ -51,34 +51,34 @@ public:
         auto isIntId = planContext_->isIntId_;
         for (auto* tagNode : tagNodes_) {
             ret = tagNode->collectTagPropsIfValid(
-                [&row](const std::vector<PropContext>* props) -> nebula::cpp2::ErrorCode {
+                [&row](const std::vector<PropContext>* props) -> ErrorCode {
                     for (const auto& prop : *props) {
                         if (prop.returned_) {
                             row.emplace_back(Value());
                         }
                     }
-                    return nebula::cpp2::ErrorCode::SUCCEEDED;
+                    return ErrorCode::SUCCEEDED;
                 },
                 [this, &row, vIdLen, isIntId, &vId, tagNode] (folly::StringPiece key,
                                                               RowReader* reader,
                                                               const std::vector<PropContext>* props)
-                -> nebula::cpp2::ErrorCode {
+                -> ErrorCode {
                     if (!QueryUtils::collectVertexProps(key, vIdLen, isIntId,
                                                         reader, props, row).ok()) {
-                        return nebula::cpp2::ErrorCode::E_TAG_PROP_NOT_FOUND;
+                        return ErrorCode::E_STORAGE_QUERY_READ_TAG_PROP_FAILD;
                     }
                     if (FLAGS_enable_vertex_cache && vertexCache_ != nullptr) {
                         auto tagId = tagNode->getTagId();
                         vertexCache_->insert(std::make_pair(vId, tagId), reader->getData());
                     }
-                    return nebula::cpp2::ErrorCode::SUCCEEDED;
+                    return ErrorCode::SUCCEEDED;
                 });
-            if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+            if (ret != ErrorCode::SUCCEEDED) {
                 return ret;
             }
         }
         resultDataSet_->rows.emplace_back(std::move(row));
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
 private:
@@ -99,9 +99,9 @@ public:
         , edgeNodes_(std::move(edgeNodes))
         , resultDataSet_(resultDataSet) {}
 
-    nebula::cpp2::ErrorCode execute(PartitionID partId, const cpp2::EdgeKey& edgeKey) override {
+    ErrorCode execute(PartitionID partId, const cpp2::EdgeKey& edgeKey) override {
         auto ret = RelNode::execute(partId, edgeKey);
-        if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (ret != ErrorCode::SUCCEEDED) {
             return ret;
         }
 
@@ -110,30 +110,30 @@ public:
         auto isIntId = planContext_->isIntId_;
         for (auto* edgeNode : edgeNodes_) {
             ret = edgeNode->collectEdgePropsIfValid(
-                [&row] (const std::vector<PropContext>* props) -> nebula::cpp2::ErrorCode {
+                [&row] (const std::vector<PropContext>* props) -> ErrorCode {
                     for (const auto& prop : *props) {
                         if (prop.returned_) {
                             row.emplace_back(Value());
                         }
                     }
-                    return nebula::cpp2::ErrorCode::SUCCEEDED;
+                    return ErrorCode::SUCCEEDED;
                 },
                 [&row, vIdLen, isIntId] (folly::StringPiece key,
                                          RowReader* reader,
                                          const std::vector<PropContext>* props)
-                -> nebula::cpp2::ErrorCode {
+                -> ErrorCode {
                     if (!QueryUtils::collectEdgeProps(key, vIdLen, isIntId,
                                                       reader, props, row).ok()) {
-                        return nebula::cpp2::ErrorCode::E_EDGE_PROP_NOT_FOUND;
+                        return ErrorCode::E_STORAGE_QUERY_READ_EDGE_PROP_FAILED;
                     }
-                    return nebula::cpp2::ErrorCode::SUCCEEDED;
+                    return ErrorCode::SUCCEEDED;
                 });
-            if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+            if (ret != ErrorCode::SUCCEEDED) {
                 return ret;
             }
         }
         resultDataSet_->rows.emplace_back(std::move(row));
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
 private:

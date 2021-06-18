@@ -70,7 +70,7 @@ public:
         auto now = time::WallClock::fastNowInMilliSec();
         for (auto& h : hosts) {
             auto ret = ActiveHostsMan::updateHostInfo(kv, h, HostInfo(now, role, gitInfoSha));
-            ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+            ASSERT_EQ(ErrorCode::SUCCEEDED, ret);
         }
     }
 
@@ -119,8 +119,8 @@ public:
 
         folly::Baton<true, std::atomic> baton;
         kv->asyncMultiPut(0, 0, std::move(data),
-                          [&] (nebula::cpp2::ErrorCode code) {
-                              ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, code);
+                          [&] (ErrorCode code) {
+                              ASSERT_EQ(ErrorCode::SUCCEEDED, code);
                               baton.post();
                           });
         baton.wait();
@@ -131,7 +131,7 @@ public:
         auto zoneKey = MetaServiceUtils::zoneKey(zoneName);
         std::string zoneValue;
         auto retCode = kv->get(kDefaultSpaceId, kDefaultPartId, zoneKey, &zoneValue);
-        if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (retCode != ErrorCode::SUCCEEDED) {
             LOG(ERROR) << "Get zone " <<  zoneName << " failed";
             return false;
         }
@@ -158,8 +158,8 @@ public:
         bool ret = false;
         folly::Baton<true, std::atomic> baton;
         kv->asyncMultiPut(0, 0, std::move(data),
-                          [&] (nebula::cpp2::ErrorCode code) {
-                              ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, code);
+                          [&] (ErrorCode code) {
+                              ASSERT_EQ(ErrorCode::SUCCEEDED, code);
                               baton.post();
                           });
         baton.wait();
@@ -171,7 +171,7 @@ public:
         auto groupKey = MetaServiceUtils::groupKey(groupName);
         std::string groupValue;
         auto retCode = kv->get(kDefaultSpaceId, kDefaultPartId, groupKey, &groupValue);
-        if (retCode != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        if (retCode != ErrorCode::SUCCEEDED) {
             LOG(ERROR) << "Get group " <<  groupName << " failed";
             return false;
         }
@@ -197,8 +197,8 @@ public:
 
         folly::Baton<true, std::atomic> baton;
         kv->asyncMultiPut(0, 0, std::move(data),
-                          [&] (nebula::cpp2::ErrorCode code) {
-                              ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, code);
+                          [&] (ErrorCode code) {
+                              ASSERT_EQ(ErrorCode::SUCCEEDED, code);
                               baton.post();
                           });
         baton.wait();
@@ -234,8 +234,8 @@ public:
         }
         folly::Baton<true, std::atomic> baton;
         kv->asyncMultiPut(0, 0, std::move(data),
-                          [&] (nebula::cpp2::ErrorCode code) {
-                              ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, code);
+                          [&] (ErrorCode code) {
+                              ASSERT_EQ(ErrorCode::SUCCEEDED, code);
                               baton.post();
                           });
         baton.wait();
@@ -270,8 +270,8 @@ public:
         }
         folly::Baton<true, std::atomic> baton;
         kv->asyncMultiPut(0, 0, std::move(tags),
-                          [&] (nebula::cpp2::ErrorCode code) {
-                              ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, code);
+                          [&] (ErrorCode code) {
+                              ASSERT_EQ(ErrorCode::SUCCEEDED, code);
                               baton.post();
                           });
         baton.wait();
@@ -298,8 +298,8 @@ public:
                           MetaServiceUtils::indexVal(item));
         folly::Baton<true, std::atomic> baton;
         kv->asyncMultiPut(0, 0, std::move(data),
-                          [&] (nebula::cpp2::ErrorCode code) {
-                              ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, code);
+                          [&] (ErrorCode code) {
+                              ASSERT_EQ(ErrorCode::SUCCEEDED, code);
                               baton.post();
                           });
         baton.wait();
@@ -326,8 +326,8 @@ public:
                           MetaServiceUtils::indexVal(item));
         folly::Baton<true, std::atomic> baton;
         kv->asyncMultiPut(0, 0, std::move(data),
-                          [&] (nebula::cpp2::ErrorCode code) {
-                              ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, code);
+                          [&] (ErrorCode code) {
+                              ASSERT_EQ(ErrorCode::SUCCEEDED, code);
                               baton.post();
                           });
         baton.wait();
@@ -363,8 +363,8 @@ public:
         }
 
         folly::Baton<true, std::atomic> baton;
-        kv->asyncMultiPut(0, 0, std::move(edges), [&] (nebula::cpp2::ErrorCode code) {
-            ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, code);
+        kv->asyncMultiPut(0, 0, std::move(edges), [&] (ErrorCode code) {
+            ASSERT_EQ(ErrorCode::SUCCEEDED, code);
             baton.post();
         });
         baton.wait();

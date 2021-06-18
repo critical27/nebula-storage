@@ -23,7 +23,7 @@ void CreateEdgeIndexProcessor::process(const cpp2::CreateEdgeIndexReq& req) {
     }
     if (fields.size() != columnSet.size()) {
         LOG(ERROR) << "Conflict field in the edge index.";
-        handleErrorCode(nebula::cpp2::ErrorCode::E_CONFLICT);
+        handleErrorCode(ErrorCode::E_META_INDEX_COLUMN_NOT_MATCH);
         onFinished();
         return;
     }
@@ -32,7 +32,7 @@ void CreateEdgeIndexProcessor::process(const cpp2::CreateEdgeIndexReq& req) {
     if (columnSet.size() > maxIndexLimit) {
         LOG(ERROR) << "The number of index columns exceeds maximum limit "
                    << maxIndexLimit;
-        handleErrorCode(nebula::cpp2::ErrorCode::E_CONFLICT);
+        handleErrorCode(ErrorCode::E_META_INDEX_COLUMN_EXCEED_LIMIT);
         onFinished();
         return;
     }
@@ -42,17 +42,17 @@ void CreateEdgeIndexProcessor::process(const cpp2::CreateEdgeIndexReq& req) {
     auto ret = getIndexID(space, indexName);
     if (nebula::ok(ret)) {
         if (req.get_if_not_exists()) {
-            handleErrorCode(nebula::cpp2::ErrorCode::SUCCEEDED);
+            handleErrorCode(ErrorCode::SUCCEEDED);
         } else {
             LOG(ERROR) << "Create Edge Index Failed: " << indexName << " has existed";
-            handleErrorCode(nebula::cpp2::ErrorCode::E_EXISTED);
+            handleErrorCode(ErrorCode::E_META_SCHEMA_INDEX_EXISTED);
         }
         resp_.set_id(to(nebula::value(ret), EntryType::INDEX));
         onFinished();
         return;
     } else {
         auto retCode = nebula::error(ret);
-        if (retCode != nebula::cpp2::ErrorCode::E_INDEX_NOT_FOUND) {
+        if (retCode != ErrorCode::E_META_INDEX_NOT_FOUND) {
             LOG(ERROR) << "Create Edge Index Failed, index name " << indexName << " error: "
                        << apache::thrift::util::enumNameSafe(retCode);
             handleErrorCode(retCode);
@@ -95,7 +95,7 @@ void CreateEdgeIndexProcessor::process(const cpp2::CreateEdgeIndexReq& req) {
         }
 
         if (checkIndexExist(fields, item)) {
-            resp_.set_code(nebula::cpp2::ErrorCode::E_EXISTED);
+            resp_.set_code(ErrorCode::E_META_SCHEMA_INDEX_EXISTED);
             onFinished();
             return;
         }
@@ -123,7 +123,7 @@ void CreateEdgeIndexProcessor::process(const cpp2::CreateEdgeIndexReq& req) {
 
         if (iter == schemaCols.end()) {
             LOG(ERROR) << "Field " << field.get_name() << " not found in Edge " << edgeName;
-            handleErrorCode(nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND);
+            handleErrorCode(ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND);
             onFinished();
             return;
         }
@@ -133,14 +133,14 @@ void CreateEdgeIndexProcessor::process(const cpp2::CreateEdgeIndexReq& req) {
                 LOG(ERROR) << "Unsupport index type lengths greater than "
                            << MAX_INDEX_TYPE_LENGTH << " : "
                            << field.get_name();
-                handleErrorCode(nebula::cpp2::ErrorCode::E_UNSUPPORTED);
+                handleErrorCode(ErrorCode::E_META_SCHEMA_STRING_PROPERTY_EXCEED_MAX_LENGTH);
                 onFinished();
                 return;
             }
         } else if (col.type.get_type() == meta::cpp2::PropertyType::STRING) {
             if (!field.type_length_ref().has_value()) {
                 LOG(ERROR) << "No type length set : " << field.get_name();
-                handleErrorCode(nebula::cpp2::ErrorCode::E_INVALID_PARM);
+                handleErrorCode(ErrorCode::E_META_SCHEMA_STRING_PROPERTY_LENGTH_NOT_SET);
                 onFinished();
                 return;
             }
@@ -148,7 +148,7 @@ void CreateEdgeIndexProcessor::process(const cpp2::CreateEdgeIndexReq& req) {
                 LOG(ERROR) << "Unsupport index type lengths greater than "
                            << MAX_INDEX_TYPE_LENGTH << " : "
                            << field.get_name();
-                handleErrorCode(nebula::cpp2::ErrorCode::E_UNSUPPORTED);
+                handleErrorCode(ErrorCode::E_META_SCHEMA_STRING_PROPERTY_EXCEED_MAX_LENGTH);
                 onFinished();
                 return;
             }
@@ -156,7 +156,7 @@ void CreateEdgeIndexProcessor::process(const cpp2::CreateEdgeIndexReq& req) {
             col.type.set_type_length(*field.get_type_length());
         } else if (field.type_length_ref().has_value()) {
             LOG(ERROR) << "No need to set type length : " << field.get_name();
-            handleErrorCode(nebula::cpp2::ErrorCode::E_INVALID_PARM);
+            handleErrorCode(ErrorCode::E_META_SCHEMA_SET_INVALID_LENGTH);
             onFinished();
             return;
         }

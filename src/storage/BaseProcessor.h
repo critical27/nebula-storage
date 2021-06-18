@@ -57,25 +57,25 @@ protected:
         delete this;
     }
 
-    nebula::cpp2::ErrorCode getSpaceVidLen(GraphSpaceID spaceId) {
+    ErrorCode getSpaceVidLen(GraphSpaceID spaceId) {
         auto len = this->env_->schemaMan_->getSpaceVidLen(spaceId);
         if (!len.ok()) {
-            return nebula::cpp2::ErrorCode::E_SPACE_NOT_FOUND;
+            return ErrorCode::E_STORAGE_QUERY_GET_SPACE_VID_LEN_FAILED;
         }
         spaceVidLen_ = len.value();
 
         auto vIdType = this->env_->schemaMan_->getSpaceVidType(spaceId);
         if (!vIdType.ok()) {
-            return nebula::cpp2::ErrorCode::E_SPACE_NOT_FOUND;
+            return ErrorCode::E_STORAGE_QUERY_GET_SPACE_VID_TYPE_FAILED;
         }
         isIntId_ = (vIdType.value() == meta::cpp2::PropertyType::INT64);
 
-        return nebula::cpp2::ErrorCode::SUCCEEDED;
+        return ErrorCode::SUCCEEDED;
     }
 
     void doPut(GraphSpaceID spaceId, PartitionID partId, std::vector<kvstore::KV>&& data);
 
-    nebula::cpp2::ErrorCode
+    ErrorCode
     doSyncPut(GraphSpaceID spaceId,
               PartitionID partId,
               std::vector<kvstore::KV>&& data);
@@ -89,16 +89,14 @@ protected:
                        const std::string& start,
                        const std::string& end);
 
-    nebula::cpp2::ErrorCode writeResultTo(WriteResult code, bool isEdge);
-
     nebula::meta::cpp2::ColumnDef columnDef(std::string name,
                                             nebula::meta::cpp2::PropertyType type);
 
-    void pushResultCode(nebula::cpp2::ErrorCode code,
+    void pushResultCode(ErrorCode code,
                         PartitionID partId,
                         HostAddr leader = HostAddr("", 0));
 
-    void handleErrorCode(nebula::cpp2::ErrorCode code,
+    void handleErrorCode(ErrorCode code,
                          GraphSpaceID spaceId,
                          PartitionID partId);
 
@@ -106,12 +104,11 @@ protected:
 
     void handleAsync(GraphSpaceID spaceId,
                      PartitionID partId,
-                     nebula::cpp2::ErrorCode code);
+                     ErrorCode code);
 
-    StatusOr<std::string> encodeRowVal(const meta::NebulaSchemaProvider* schema,
-                                       const std::vector<std::string>& propNames,
-                                       const std::vector<Value>& props,
-                                       WriteResult& wRet);
+    ErrorOr<ErrorCode, std::string> encodeRowVal(const meta::NebulaSchemaProvider* schema,
+                                                 const std::vector<std::string>& propNames,
+                                                 const std::vector<Value>& props);
 
 protected:
     StorageEnv*                                     env_{nullptr};

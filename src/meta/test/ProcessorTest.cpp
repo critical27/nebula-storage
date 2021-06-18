@@ -24,12 +24,6 @@
 #include "meta/processors/schemaMan/ListEdgesProcessor.h"
 #include "meta/processors/schemaMan/AlterTagProcessor.h"
 #include "meta/processors/schemaMan/AlterEdgeProcessor.h"
-#include "meta/processors/customKV/MultiPutProcessor.h"
-#include "meta/processors/customKV/GetProcessor.h"
-#include "meta/processors/customKV/MultiGetProcessor.h"
-#include "meta/processors/customKV/RemoveProcessor.h"
-#include "meta/processors/customKV/RemoveRangeProcessor.h"
-#include "meta/processors/customKV/ScanProcessor.h"
 #include "meta/processors/zoneMan/AddGroupProcessor.h"
 #include "meta/processors/zoneMan/DropGroupProcessor.h"
 #include "meta/processors/zoneMan/ListGroupsProcessor.h"
@@ -165,7 +159,7 @@ TEST(ProcessorTest, ListPartsTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(9, (*resp.parts_ref()).size());
 
         auto parts = std::move((*resp.parts_ref()));
@@ -191,7 +185,7 @@ TEST(ProcessorTest, ListPartsTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         auto parts = std::move((*resp.parts_ref()));
         ASSERT_EQ(1, parts.size());
 
@@ -211,7 +205,7 @@ TEST(ProcessorTest, ListPartsTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND, resp.get_status().get_code());
     }
 
     // register HB with leader distribution
@@ -233,19 +227,19 @@ TEST(ProcessorTest, ListPartsTest) {
             allLeaders[spaceId].emplace_back(makeLeaderInfo(i));
         }
         auto ret = ActiveHostsMan::updateHostInfo(kv.get(), {"0", 0}, info, &allLeaders);
-        ASSERT_EQ(ret, nebula::cpp2::ErrorCode::SUCCEEDED);
+        ASSERT_EQ(ret, ErrorCode::SUCCEEDED);
 
         allLeaders.clear();
         for (int i = 6; i < 9; ++i) {
             allLeaders[spaceId].emplace_back(makeLeaderInfo(i));
         }
         ret = ActiveHostsMan::updateHostInfo(kv.get(), {"1", 1}, info, &allLeaders);
-        ASSERT_EQ(ret, nebula::cpp2::ErrorCode::SUCCEEDED);
+        ASSERT_EQ(ret, ErrorCode::SUCCEEDED);
 
         allLeaders.clear();
         allLeaders[spaceId].emplace_back(makeLeaderInfo(9));
         ret = ActiveHostsMan::updateHostInfo(kv.get(), {"2", 2}, info, &allLeaders);
-        ASSERT_EQ(ret, nebula::cpp2::ErrorCode::SUCCEEDED);
+        ASSERT_EQ(ret, ErrorCode::SUCCEEDED);
     }
 
     {
@@ -331,7 +325,7 @@ TEST(ProcessorTest, SpaceTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(1, resp.get_id().get_space_id());
     }
     {
@@ -341,7 +335,7 @@ TEST(ProcessorTest, SpaceTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ("default_space", resp.get_item().get_properties().get_space_name());
         ASSERT_EQ(8, resp.get_item().get_properties().get_partition_num());
         ASSERT_EQ(3, resp.get_item().get_properties().get_replica_factor());
@@ -358,7 +352,7 @@ TEST(ProcessorTest, SpaceTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(1, resp.get_spaces().size());
         ASSERT_EQ(1, resp.get_spaces()[0].get_id().get_space_id());
         ASSERT_EQ("default_space", resp.get_spaces()[0].get_name());
@@ -371,7 +365,7 @@ TEST(ProcessorTest, SpaceTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         std::unordered_map<HostAddr, std::set<PartitionID>> hostsParts;
         for (auto& p : resp.get_parts()) {
             for (auto& h : p.second) {
@@ -391,7 +385,7 @@ TEST(ProcessorTest, SpaceTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     {
         cpp2::ListSpacesReq req;
@@ -399,7 +393,7 @@ TEST(ProcessorTest, SpaceTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(0, resp.get_spaces().size());
     }
     // With IF EXISTS
@@ -411,7 +405,7 @@ TEST(ProcessorTest, SpaceTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     {
         constexpr char spaceName[] = "exist_space";
@@ -423,7 +417,7 @@ TEST(ProcessorTest, SpaceTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
 
         cpp2::DropSpaceReq req1;
         req1.set_space_name(spaceName);
@@ -432,7 +426,7 @@ TEST(ProcessorTest, SpaceTest) {
         auto f1 = processor1->getFuture();
         processor1->process(req1);
         auto resp1 = std::move(f1).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp1.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp1.get_code());
     }
     // Test default value
     {
@@ -444,7 +438,7 @@ TEST(ProcessorTest, SpaceTest) {
         auto cf = cprocessor->getFuture();
         cprocessor->process(creq);
         auto cresp = std::move(cf).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, cresp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, cresp.get_status().get_code());
 
         cpp2::GetSpaceReq greq;
         greq.set_space_name("space_with_no_option");
@@ -452,7 +446,7 @@ TEST(ProcessorTest, SpaceTest) {
         auto gf = gprocessor->getFuture();
         gprocessor->process(greq);
         auto gresp = std::move(gf).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, gresp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, gresp.get_status().get_code());
         ASSERT_EQ("space_with_no_option", gresp.get_item().get_properties().get_space_name());
         ASSERT_EQ(100, gresp.get_item().get_properties().get_partition_num());
         ASSERT_EQ(1, gresp.get_item().get_properties().get_replica_factor());
@@ -466,7 +460,7 @@ TEST(ProcessorTest, SpaceTest) {
         auto df = dprocessor->getFuture();
         dprocessor->process(dreq);
         auto dresp = std::move(df).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, dresp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, dresp.get_status().get_code());
     }
 }
 
@@ -493,7 +487,7 @@ TEST(ProcessorTest, SpaceWithGroupTest) {
             auto f = processor->getFuture();
             processor->process(req);
             auto resp = std::move(f).get();
-            ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+            ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         }
         {
             std::vector<HostAddr> nodes;
@@ -507,7 +501,7 @@ TEST(ProcessorTest, SpaceWithGroupTest) {
             auto f = processor->getFuture();
             processor->process(req);
             auto resp = std::move(f).get();
-            ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+            ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         }
         {
             std::vector<HostAddr> nodes;
@@ -521,7 +515,7 @@ TEST(ProcessorTest, SpaceWithGroupTest) {
             auto f = processor->getFuture();
             processor->process(req);
             auto resp = std::move(f).get();
-            ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+            ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         }
         {
             std::vector<HostAddr> nodes;
@@ -535,7 +529,7 @@ TEST(ProcessorTest, SpaceWithGroupTest) {
             auto f = processor->getFuture();
             processor->process(req);
             auto resp = std::move(f).get();
-            ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+            ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         }
         {
             std::vector<HostAddr> nodes;
@@ -549,7 +543,7 @@ TEST(ProcessorTest, SpaceWithGroupTest) {
             auto f = processor->getFuture();
             processor->process(req);
             auto resp = std::move(f).get();
-            ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+            ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         }
     }
     // List Zones
@@ -559,7 +553,7 @@ TEST(ProcessorTest, SpaceWithGroupTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(5, resp.get_zones().size());
         ASSERT_EQ("zone_0", resp.get_zones()[0].get_zone_name());
         ASSERT_EQ("zone_1", resp.get_zones()[1].get_zone_name());
@@ -578,7 +572,7 @@ TEST(ProcessorTest, SpaceWithGroupTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     {
         cpp2::AddGroupReq req;
@@ -589,7 +583,7 @@ TEST(ProcessorTest, SpaceWithGroupTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // List Groups
     {
@@ -598,7 +592,7 @@ TEST(ProcessorTest, SpaceWithGroupTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(2, resp.get_groups().size());
         ASSERT_EQ("group_0", resp.get_groups()[0].get_group_name());
         ASSERT_EQ("group_1", resp.get_groups()[1].get_group_name());
@@ -616,7 +610,7 @@ TEST(ProcessorTest, SpaceWithGroupTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Create Space on group_0, replica factor is equal with zone size
     {
@@ -631,7 +625,7 @@ TEST(ProcessorTest, SpaceWithGroupTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Drop Group should failed
     {
@@ -641,7 +635,7 @@ TEST(ProcessorTest, SpaceWithGroupTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_NOT_DROP, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_GROUP_STILL_BIND_TO_SPACE, resp.get_status().get_code());
     }
     // Create Space on group_0, replica factor is less than zone size
     {
@@ -656,7 +650,7 @@ TEST(ProcessorTest, SpaceWithGroupTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Create Space on group_0, replica factor is larger than zone size
     {
@@ -671,7 +665,7 @@ TEST(ProcessorTest, SpaceWithGroupTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_INVALID_PARM, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_SCHEMA_INVALID_DEFAULT_VALUE, resp.get_status().get_code());
     }
     {
         cpp2::AddZoneIntoGroupReq req;
@@ -681,7 +675,7 @@ TEST(ProcessorTest, SpaceWithGroupTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     {
         cpp2::SpaceDesc properties;
@@ -695,7 +689,7 @@ TEST(ProcessorTest, SpaceWithGroupTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Create Space on a group which is not exist
     {
@@ -710,7 +704,7 @@ TEST(ProcessorTest, SpaceWithGroupTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_GROUP_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_GROUP_NOT_FOUND, resp.get_status().get_code());
     }
 }
 
@@ -731,7 +725,7 @@ TEST(ProcessorTest, CreateTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(1, resp.get_id().get_space_id());
     }
     {
@@ -746,7 +740,7 @@ TEST(ProcessorTest, CreateTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(2, resp.get_id().get_space_id());
     }
     cpp2::Schema schema;
@@ -765,7 +759,7 @@ TEST(ProcessorTest, CreateTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_SPACE_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_STORAGE_SPACE_NOT_FOUND, resp.get_status().get_code());
     }
     {
         // Succeeded
@@ -777,7 +771,7 @@ TEST(ProcessorTest, CreateTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(3, resp.get_id().get_tag_id());
     }
     {
@@ -790,7 +784,7 @@ TEST(ProcessorTest, CreateTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_EXISTED, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_SCHEMA_TAG_EXISTED, resp.get_status().get_code());
     }
     {
         // Create same name tag in diff spaces
@@ -802,7 +796,7 @@ TEST(ProcessorTest, CreateTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(4, resp.get_id().get_tag_id());
     }
     {
@@ -815,7 +809,7 @@ TEST(ProcessorTest, CreateTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_CONFLICT, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_SCHEMA_NAME_CONFLICT, resp.get_status().get_code());
     }
     {
         // Set schema ttl property
@@ -833,7 +827,7 @@ TEST(ProcessorTest, CreateTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(5, resp.get_id().get_tag_id());
     }
     // Wrong default value type
@@ -858,7 +852,7 @@ TEST(ProcessorTest, CreateTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_INVALID_PARM, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_SCHEMA_INVALID_DEFAULT_VALUE, resp.get_status().get_code());
     }
     // Wrong default value
     {
@@ -882,7 +876,7 @@ TEST(ProcessorTest, CreateTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_INVALID_PARM, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_SCHEMA_INVALID_DEFAULT_VALUE, resp.get_status().get_code());
     }
     {
         cpp2::CreateTagReq req;
@@ -894,7 +888,7 @@ TEST(ProcessorTest, CreateTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
 
         cpp2::GetTagReq getReq;
         getReq.set_space_id(1);
@@ -904,7 +898,7 @@ TEST(ProcessorTest, CreateTagTest) {
         auto getFut = getProcessor->getFuture();
         getProcessor->process(getReq);
         auto getResp = std::move(getFut).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, getResp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, getresp.get_status().get_code());
         TestUtils::checkSchemaWithAllType(getResp.get_schema());
     }
 }
@@ -927,7 +921,7 @@ TEST(ProcessorTest, CreateEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(1, resp.get_id().get_space_id());
    }
    {
@@ -943,7 +937,7 @@ TEST(ProcessorTest, CreateEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(2, resp.get_id().get_space_id());
     }
 
@@ -962,7 +956,7 @@ TEST(ProcessorTest, CreateEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_SPACE_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_STORAGE_SPACE_NOT_FOUND, resp.get_status().get_code());
     }
     {
         // Succeeded
@@ -974,7 +968,7 @@ TEST(ProcessorTest, CreateEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(3, resp.get_id().get_edge_type());
     }
     {
@@ -987,7 +981,7 @@ TEST(ProcessorTest, CreateEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_EXISTED, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_SCHEMA_EDGE_EXISTED, resp.get_status().get_code());
     }
     {
         // Create same name edge in diff spaces
@@ -999,7 +993,7 @@ TEST(ProcessorTest, CreateEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(4, resp.get_id().get_edge_type());
     }
     {
@@ -1012,7 +1006,7 @@ TEST(ProcessorTest, CreateEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_CONFLICT, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_SCHEMA_NAME_CONFLICT, resp.get_status().get_code());
     }
 
     // Set schema ttl property
@@ -1030,7 +1024,7 @@ TEST(ProcessorTest, CreateEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(5, resp.get_id().get_edge_type());
     }
     {
@@ -1050,7 +1044,7 @@ TEST(ProcessorTest, CreateEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(6, resp.get_id().get_edge_type());
     }
     {
@@ -1068,7 +1062,7 @@ TEST(ProcessorTest, CreateEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_INVALID_PARM, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_SCHEMA_INVALID_DEFAULT_VALUE, resp.get_status().get_code());
     }
     {
         cpp2::CreateTagReq req;
@@ -1080,7 +1074,7 @@ TEST(ProcessorTest, CreateEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
 
         cpp2::GetTagReq getReq;
         getReq.set_space_id(1);
@@ -1090,133 +1084,8 @@ TEST(ProcessorTest, CreateEdgeTest) {
         auto getFut = getProcessor->getFuture();
         getProcessor->process(getReq);
         auto getResp = std::move(getFut).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, getResp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, getresp.get_status().get_code());
         TestUtils::checkSchemaWithAllType(getResp.get_schema());
-    }
-}
-
-TEST(ProcessorTest, KVOperationTest) {
-    fs::TempDir rootPath("/tmp/KVOperationTest.XXXXXX");
-    auto kv = MockCluster::initMetaKV(rootPath.path());
-    TestUtils::createSomeHosts(kv.get());
-
-    {
-        cpp2::SpaceDesc properties;
-        properties.set_space_name("default_space");
-        properties.set_partition_num(9);
-        properties.set_replica_factor(3);
-        cpp2::CreateSpaceReq req;
-        req.set_properties(std::move(properties));
-
-        auto* processor = CreateSpaceProcessor::instance(kv.get());
-        auto f = processor->getFuture();
-        processor->process(req);
-        auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
-        ASSERT_EQ(1, resp.get_id().get_space_id());
-    }
-    {
-        // Multi Put Test
-        std::vector<nebula::KeyValue> pairs;
-        for (auto i = 0; i < 10; i++) {
-            pairs.emplace_back(std::make_pair(folly::stringPrintf("key_%d", i),
-                                              folly::stringPrintf("value_%d", i)));
-        }
-
-        cpp2::MultiPutReq req;
-        req.set_segment("test");
-        req.set_pairs(std::move(pairs));
-
-        auto* processor = MultiPutProcessor::instance(kv.get());
-        auto f = processor->getFuture();
-        processor->process(req);
-        auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
-    }
-    {
-        // Get Test
-        cpp2::GetReq req;
-        req.set_segment("test");
-        req.set_key("key_0");
-
-        auto* processor = GetProcessor::instance(kv.get());
-        auto f = processor->getFuture();
-        processor->process(req);
-        auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
-        ASSERT_EQ("value_0", resp.get_value());
-
-        cpp2::GetReq missedReq;
-        missedReq.set_segment("test");
-        missedReq.set_key("missed_key");
-
-        auto* missedProcessor = GetProcessor::instance(kv.get());
-        auto missedFuture = missedProcessor->getFuture();
-        missedProcessor->process(missedReq);
-        auto missedResp = std::move(missedFuture).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND, missedResp.get_code());
-    }
-    {
-        // Multi Get Test
-        std::vector<std::string> keys;
-        for (auto i = 0; i < 2; i++) {
-            keys.emplace_back(folly::stringPrintf("key_%d", i));
-        }
-
-        cpp2::MultiGetReq req;
-        req.set_segment("test");
-        req.set_keys(std::move(keys));
-
-        auto* processor = MultiGetProcessor::instance(kv.get());
-        auto f = processor->getFuture();
-        processor->process(req);
-        auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
-        ASSERT_EQ(2, resp.get_values().size());
-        ASSERT_EQ("value_0", resp.get_values()[0]);
-        ASSERT_EQ("value_1", resp.get_values()[1]);
-    }
-    {
-        // Scan Test
-        cpp2::ScanReq req;
-        req.set_segment("test");
-        req.set_start("key_1");
-        req.set_end("key_4");
-
-        auto* processor = ScanProcessor::instance(kv.get());
-        auto f = processor->getFuture();
-        processor->process(req);
-        auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
-        ASSERT_EQ(3, resp.get_values().size());
-        ASSERT_EQ("value_1", resp.get_values()[0]);
-        ASSERT_EQ("value_2", resp.get_values()[1]);
-        ASSERT_EQ("value_3", resp.get_values()[2]);
-    }
-    {
-        // Remove Test
-        cpp2::RemoveReq req;
-        req.set_segment("test");
-        req.set_key("key_9");
-
-        auto* processor = RemoveProcessor::instance(kv.get());
-        auto f = processor->getFuture();
-        processor->process(req);
-        auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
-    }
-    {
-        // Remove Range Test
-        cpp2::RemoveRangeReq req;
-        req.set_segment("test");
-        req.set_start("key_0");
-        req.set_end("key_4");
-
-        auto* processor = RemoveRangeProcessor::instance(kv.get());
-        auto f = processor->getFuture();
-        processor->process(req);
-        auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
     }
 }
 
@@ -1236,7 +1105,7 @@ TEST(ProcessorTest, ListOrGetTagsTest) {
         auto resp = std::move(f).get();
         std::vector<nebula::meta::cpp2::TagItem> tags;
         tags = resp.get_tags();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(10, tags.size());
 
         for (auto t = 0; t < 10; t++) {
@@ -1302,7 +1171,7 @@ TEST(ProcessorTest, ListOrGetTagsTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND, resp.get_status().get_code());
     }
 }
 
@@ -1323,7 +1192,7 @@ TEST(ProcessorTest, ListOrGetEdgesTest) {
         auto resp = std::move(f).get();
         std::vector<nebula::meta::cpp2::EdgeItem> edges;
         edges = resp.get_edges();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(10, edges.size());
 
         for (auto t = 0; t < 10; t++) {
@@ -1391,7 +1260,7 @@ TEST(ProcessorTest, ListOrGetEdgesTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_EDGE_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_SCHEMA_EDGE_NOT_FOUND, resp.get_status().get_code());
     }
 }
 
@@ -1410,7 +1279,7 @@ TEST(ProcessorTest, DropTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_SPACE_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_STORAGE_SPACE_NOT_FOUND, resp.get_status().get_code());
     }
     // Tag not exist
     {
@@ -1421,7 +1290,7 @@ TEST(ProcessorTest, DropTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_TAG_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_SCHEMA_TAG_NOT_FOUND, resp.get_status().get_code());
     }
     // Succeeded
     {
@@ -1432,7 +1301,7 @@ TEST(ProcessorTest, DropTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
 
     // Check tag data has been deleted.
@@ -1442,10 +1311,10 @@ TEST(ProcessorTest, DropTagTest) {
         auto ret = kv.get()->get(kDefaultSpaceId, kDefaultPartId,
                                  std::move(MetaServiceUtils::indexTagKey(1, "tag_0")),
                                  &tagVal);
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND, ret);
+        ASSERT_EQ(ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND, ret);
         std::string tagPrefix = "__tags__";
         ret = kv.get()->prefix(kDefaultSpaceId, kDefaultPartId, tagPrefix, &iter);
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+        ASSERT_EQ(ErrorCode::SUCCEEDED, ret);
         ASSERT_FALSE(iter->valid());
     }
     // With IF EXISTS
@@ -1458,7 +1327,7 @@ TEST(ProcessorTest, DropTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     {
         constexpr GraphSpaceID spaceId = 1;
@@ -1470,7 +1339,7 @@ TEST(ProcessorTest, DropTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
 
         cpp2::DropTagReq req1;
         req1.set_space_id(spaceId);
@@ -1480,7 +1349,7 @@ TEST(ProcessorTest, DropTagTest) {
         auto f1 = processor1->getFuture();
         processor1->process(req1);
         auto resp1 = std::move(f1).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp1.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp1.get_code());
     }
 }
 
@@ -1499,7 +1368,7 @@ TEST(ProcessorTest, DropEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_SPACE_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_STORAGE_SPACE_NOT_FOUND, resp.get_status().get_code());
     }
     // Edge not exist
     {
@@ -1510,7 +1379,7 @@ TEST(ProcessorTest, DropEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_EDGE_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_SCHEMA_EDGE_NOT_FOUND, resp.get_status().get_code());
     }
     // Succeeded
     {
@@ -1521,7 +1390,7 @@ TEST(ProcessorTest, DropEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Check edge data has been deleted.
     {
@@ -1530,10 +1399,10 @@ TEST(ProcessorTest, DropEdgeTest) {
         auto ret = kv.get()->get(kDefaultSpaceId, kDefaultPartId,
                                  std::move(MetaServiceUtils::indexEdgeKey(1, "edge_0")),
                                  &edgeVal);
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND, ret);
+        ASSERT_EQ(ErrorCode::E_STORAGE_KVSTORE_KEY_NOT_FOUND, ret);
         std::string edgePrefix = "__edges__";
         ret = kv.get()->prefix(kDefaultSpaceId, kDefaultPartId, edgePrefix, &iter);
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, ret);
+        ASSERT_EQ(ErrorCode::SUCCEEDED, ret);
         ASSERT_FALSE(iter->valid());
     }
     // With IF EXISTS
@@ -1546,7 +1415,7 @@ TEST(ProcessorTest, DropEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     {
         constexpr GraphSpaceID spaceId = 1;
@@ -1558,7 +1427,7 @@ TEST(ProcessorTest, DropEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
 
         cpp2::DropEdgeReq req1;
         req1.set_space_id(spaceId);
@@ -1568,7 +1437,7 @@ TEST(ProcessorTest, DropEdgeTest) {
         auto f1 = processor1->getFuture();
         processor1->process(req1);
         auto resp1 = std::move(f1).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp1.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp1.get_code());
     }
 }
 
@@ -1618,7 +1487,7 @@ TEST(ProcessorTest, AlterTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Verify alter result.
     {
@@ -1628,7 +1497,7 @@ TEST(ProcessorTest, AlterTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         auto tags = resp.get_tags();
         ASSERT_EQ(2, tags.size());
         // TagItems in vector are unordered.So need to get the latest one by comparing the versions.
@@ -1670,7 +1539,7 @@ TEST(ProcessorTest, AlterTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_NE(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_NE(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Succeeded
     {
@@ -1686,7 +1555,7 @@ TEST(ProcessorTest, AlterTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Verify alter result.
     {
@@ -1696,7 +1565,7 @@ TEST(ProcessorTest, AlterTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         auto tags = resp.get_tags();
         ASSERT_EQ(3, tags.size());
         // TagItems in vector are unordered.So need to get the latest one by comparing the versions.
@@ -1756,7 +1625,7 @@ TEST(ProcessorTest, AlterTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_NE(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_NE(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Set ttl col on illegal column type, failed
     {
@@ -1772,7 +1641,7 @@ TEST(ProcessorTest, AlterTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_NE(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_NE(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Drop ttl_col column
     {
@@ -1793,7 +1662,7 @@ TEST(ProcessorTest, AlterTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Verify alter drop ttl col result.
     {
@@ -1803,7 +1672,7 @@ TEST(ProcessorTest, AlterTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         auto tags = resp.get_tags();
         ASSERT_EQ(4, tags.size());
         // TagItems in vector are unordered.So need to get the latest one by comparing the versions.
@@ -1865,7 +1734,7 @@ TEST(ProcessorTest, AlterTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_EXISTED, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_SCHEMA_PROPERTY_EXISTED, resp.get_status().get_code());
     }
     // Verify ErrorCode of change
     {
@@ -1887,7 +1756,7 @@ TEST(ProcessorTest, AlterTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_TAG_PROP_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_STORAGE_SCHEMA_TAG_PROP_NOT_FOUND, resp.get_status().get_code());
     }
     // Verify ErrorCode of drop
     {
@@ -1909,7 +1778,7 @@ TEST(ProcessorTest, AlterTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_TAG_PROP_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_STORAGE_SCHEMA_TAG_PROP_NOT_FOUND, resp.get_status().get_code());
     }
     // Add col with wrong default value type
     {
@@ -1933,7 +1802,7 @@ TEST(ProcessorTest, AlterTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_INVALID_PARM, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_SCHEMA_INVALID_DEFAULT_VALUE, resp.get_status().get_code());
     }
     // Add col with out of range of fixed string
     {
@@ -1958,7 +1827,7 @@ TEST(ProcessorTest, AlterTagTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
 
         // check result
         cpp2::GetTagReq getReq;
@@ -1970,7 +1839,7 @@ TEST(ProcessorTest, AlterTagTest) {
         auto getFut = getProcessor->getFuture();
         getProcessor->process(getReq);
         auto resp1 = std::move(getFut).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp1.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp1.get_code());
         std::vector<cpp2::ColumnDef> cols = resp1.get_schema().get_columns();
         bool expected = false;
         for (const auto &col : cols) {
@@ -2016,7 +1885,7 @@ TEST(ProcessorTest, AlterEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     {
         cpp2::ListEdgesReq req;
@@ -2025,7 +1894,7 @@ TEST(ProcessorTest, AlterEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         auto edges = resp.get_edges();
         ASSERT_EQ(2, edges.size());
         auto edge = edges[0].get_version() > 0 ? edges[0] : edges[1];
@@ -2055,7 +1924,7 @@ TEST(ProcessorTest, AlterEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     {
         cpp2::AlterEdgeReq req;
@@ -2098,7 +1967,7 @@ TEST(ProcessorTest, AlterEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Verify alter result.
     {
@@ -2108,7 +1977,7 @@ TEST(ProcessorTest, AlterEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         auto edges = resp.get_edges();
         ASSERT_EQ(4, edges.size());
         // Get the latest one by comparing the versions.
@@ -2157,7 +2026,7 @@ TEST(ProcessorTest, AlterEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_NE(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_NE(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Succeed
     {
@@ -2173,7 +2042,7 @@ TEST(ProcessorTest, AlterEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Verify alter result.
     {
@@ -2183,7 +2052,7 @@ TEST(ProcessorTest, AlterEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         auto edges = resp.get_edges();
         ASSERT_EQ(5, edges.size());
         // EdgeItems in vector are unordered.So get the latest one by comparing the versions.
@@ -2250,7 +2119,7 @@ TEST(ProcessorTest, AlterEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_NE(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_NE(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Set ttl col on illegal column type, failed
     {
@@ -2266,7 +2135,7 @@ TEST(ProcessorTest, AlterEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_NE(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_NE(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Drop ttl_col column
     {
@@ -2287,7 +2156,7 @@ TEST(ProcessorTest, AlterEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // Verify alter drop ttl col result
     {
@@ -2297,7 +2166,7 @@ TEST(ProcessorTest, AlterEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         auto edges = resp.get_edges();
         ASSERT_EQ(6, edges.size());
         // EdgeItems in vector are unordered.So get the latest one by comparing the versions.
@@ -2361,7 +2230,7 @@ TEST(ProcessorTest, AlterEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_EXISTED, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_SCHEMA_PROPERTY_EXISTED, resp.get_status().get_code());
     }
     // Verify ErrorCode of change
     {
@@ -2384,7 +2253,7 @@ TEST(ProcessorTest, AlterEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_EDGE_PROP_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_STORAGE_SCHEMA_EDGE_PROP_NOT_FOUND, resp.get_status().get_code());
     }
     // Verify ErrorCode of drop
     {
@@ -2407,7 +2276,7 @@ TEST(ProcessorTest, AlterEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_EDGE_PROP_NOT_FOUND, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_STORAGE_SCHEMA_EDGE_PROP_NOT_FOUND, resp.get_status().get_code());
     }
     // Add col with wrong default value type
     {
@@ -2431,7 +2300,7 @@ TEST(ProcessorTest, AlterEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_INVALID_PARM, resp.get_code());
+        ASSERT_EQ(ErrorCode::E_META_SCHEMA_INVALID_DEFAULT_VALUE, resp.get_status().get_code());
     }
     // Add col with out of range of fixed string
     {
@@ -2456,7 +2325,7 @@ TEST(ProcessorTest, AlterEdgeTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
 
         // check result
         cpp2::GetEdgeReq getReq;
@@ -2468,7 +2337,7 @@ TEST(ProcessorTest, AlterEdgeTest) {
         auto getFut = getProcessor->getFuture();
         getProcessor->process(getReq);
         auto resp1 = std::move(getFut).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp1.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp1.get_code());
         std::vector<cpp2::ColumnDef> cols = resp1.get_schema().get_columns();
         bool expected = false;
         for (const auto &col : cols) {
@@ -2502,7 +2371,7 @@ TEST(ProcessorTest, SameNameTagsTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(1, resp.get_id().get_space_id());
     }
     {
@@ -2516,7 +2385,7 @@ TEST(ProcessorTest, SameNameTagsTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(2, resp.get_id().get_space_id());
     }
 
@@ -2536,7 +2405,7 @@ TEST(ProcessorTest, SameNameTagsTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(3, resp.get_id().get_tag_id());
     }
     {
@@ -2548,7 +2417,7 @@ TEST(ProcessorTest, SameNameTagsTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(4, resp.get_id().get_tag_id());
     }
 
@@ -2561,7 +2430,7 @@ TEST(ProcessorTest, SameNameTagsTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
 
     // List Test
@@ -2574,7 +2443,7 @@ TEST(ProcessorTest, SameNameTagsTest) {
         auto resp = std::move(f).get();
         std::vector<nebula::meta::cpp2::TagItem> tags;
         tags = resp.get_tags();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(0, tags.size());
     }
     {
@@ -2586,7 +2455,7 @@ TEST(ProcessorTest, SameNameTagsTest) {
         auto resp = std::move(f).get();
         std::vector<nebula::meta::cpp2::TagItem> tags;
         tags = resp.get_tags();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ(1, tags.size());
 
         ASSERT_EQ(4, tags[0].get_tag_id());
@@ -2609,7 +2478,7 @@ TEST(ProcessorTest, SessionManagerTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // create session
     {
@@ -2621,7 +2490,7 @@ TEST(ProcessorTest, SessionManagerTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         sessionId = resp.get_session().get_session_id();
     }
     // update session
@@ -2636,7 +2505,7 @@ TEST(ProcessorTest, SessionManagerTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // list session
     {
@@ -2646,7 +2515,7 @@ TEST(ProcessorTest, SessionManagerTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
     }
     // get session
     {
@@ -2657,7 +2526,7 @@ TEST(ProcessorTest, SessionManagerTest) {
         auto f = processor->getFuture();
         processor->process(req);
         auto resp = std::move(f).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, resp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, resp.get_status().get_code());
         ASSERT_EQ("test", resp.get_session().get_space_name());
     }
     // delete session
@@ -2669,7 +2538,7 @@ TEST(ProcessorTest, SessionManagerTest) {
         auto delFut = dProcessor->getFuture();
         dProcessor->process(delReq);
         auto dResp = std::move(delFut).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::SUCCEEDED, dResp.get_code());
+        ASSERT_EQ(ErrorCode::SUCCEEDED, dresp.get_status().get_code());
 
         // check result
         cpp2::GetSessionReq getReq;
@@ -2679,7 +2548,7 @@ TEST(ProcessorTest, SessionManagerTest) {
         auto getFut = gProcessor->getFuture();
         gProcessor->process(getReq);
         auto gResp = std::move(getFut).get();
-        ASSERT_EQ(nebula::cpp2::ErrorCode::E_SESSION_NOT_FOUND, gResp.get_code());
+        ASSERT_EQ(ErrorCode::E_SESSION_NOT_FOUND, gresp.get_status().get_code());
     }
 }
 }  // namespace meta
